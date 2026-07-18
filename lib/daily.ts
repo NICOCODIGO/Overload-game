@@ -16,7 +16,10 @@ export type GameId =
   | "typing"
   | "clock"
   | "anomaly"
-  | "count";
+  | "count"
+  | "pattern"
+  | "illusion"
+  | "blink";
 
 export type Mode = "daily" | "practice";
 

@@ -1,6 +1,6 @@
 # OVERLOAD — the brain arcade
 
-Five fast, stressful mini-games that test reflexes, focus, and patience.
+Nine fast, stressful mini-games that test reflexes, focus, and patience.
 Every game has a **daily challenge** — seeded from the UTC date, so every
 player worldwide gets the identical run — plus an endless practice mode.
 
@@ -11,6 +11,10 @@ player worldwide gets the identical run — plus an endless practice mode.
 | `/typing` | **Panic Type** | 20 prompts, short words → punctuated phrases. Type them exactly. Typos flash red; the clock has no mercy. Score = prompts survived + accuracy. |
 | `/clock` | **Overclocked** | Read the analog clock, tap the matching time — flip rounds reverse it (match the digital time to a face). Numbers vanish, distractors become hand-swap traps, and the finale clocks spin, freeze, and disappear. |
 | `/anomaly` | **Anomaly** | Anomaly detection: one glyph in a seeded crowd doesn't belong. Color pops → emoji odd-one-out → conjunction search → near-identical character twins. Wrong taps burn time. |
+| `/count` | **Headcount** | A mob of numbers and shapes in mixed colors, sizes, and spins — count only what the question asks for ("how many are mint?", "how many triangles?", "how many huge 7s?"). One keypad tap to answer. |
+| `/pattern` | **Next!** | Sequence completion: number runs, letter ladders, spinning arrows, interleaved threads. The wrong options are the mistakes you were about to make. |
+| `/illusion` | **Double Take** | Optical illusions with factual questions — which is ACTUALLY longer/bigger/lighter? Sometimes the illusion lies, sometimes it doesn't, sometimes they're the same. |
+| `/blink` | **Blink** | Change blindness: the scene flashes, blinks, and flashes again with one difference. Tap it. Changes go from loud recolors to near-identical hue shifts. |
 
 Personal bests, daily results, and the daily streak live in `localStorage`.
 Results copy to the clipboard as share text, Wordle-style:
@@ -46,7 +50,7 @@ components/
   Header, GameCard, ArcadeGrid, IntroScreen, ResultScreen, TimerBar, Lives
 app/
   globals.css     ALL design tokens (colors, fonts, shadows, animations)
-  simon/  sequence/  typing/  clock/  anomaly/
+  simon/ sequence/ typing/ clock/ anomaly/ count/ pattern/ illusion/ blink/
                   one server page (metadata) + one client game component each
 ```
 

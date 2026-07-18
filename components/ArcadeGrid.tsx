@@ -17,7 +17,7 @@ export function ArcadeGrid() {
           </span>
         </h1>
         <p className="mt-3 text-fog">
-          Five ways to fry your brain. New daily challenges at midnight UTC.
+          Nine ways to fry your brain. New daily challenges at midnight UTC.
         </p>
         {streak > 0 && (
           <p className="mt-1 font-display text-sm text-coral">
@@ -65,6 +65,38 @@ export function ArcadeGrid() {
           icon="🔎"
           title="ANOMALY"
           hook="One of them doesn't belong. Find it before the feed cuts."
+          accent="text-coral"
+        />
+        <GameCard
+          game="count"
+          href="/count"
+          icon="🔢"
+          title="HEADCOUNT"
+          hook="Count the chaos — but only the ones we ask for."
+          accent="text-mint"
+        />
+        <GameCard
+          game="pattern"
+          href="/pattern"
+          icon="🧩"
+          title="NEXT!"
+          hook="2, 4, 8, 16… the pattern knows what comes next. Do you?"
+          accent="text-sky"
+        />
+        <GameCard
+          game="illusion"
+          href="/illusion"
+          icon="👁️"
+          title="DOUBLE TAKE"
+          hook="Your eyes are lying. Answer anyway."
+          accent="text-lemon"
+        />
+        <GameCard
+          game="blink"
+          href="/blink"
+          icon="👀"
+          title="BLINK"
+          hook="The scene flickers. One thing changed. Find it."
           accent="text-coral"
         />
       </div>

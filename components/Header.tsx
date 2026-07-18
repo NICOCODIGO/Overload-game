@@ -13,6 +13,9 @@ const GAMES = [
   { href: "/clock", label: "CLOCK" },
   { href: "/anomaly", label: "SPOT" },
   { href: "/count", label: "COUNT" },
+  { href: "/pattern", label: "NEXT" },
+  { href: "/illusion", label: "EYES" },
+  { href: "/blink", label: "BLINK" },
 ] as const;
 
 export function Header() {

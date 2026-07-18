@@ -19,12 +19,18 @@ import {
 const DIRS = ["up", "down", "left", "right"] as const;
 type Dir = (typeof DIRS)[number];
 
-const GLYPH: Record<Dir, string> = {
-  up: "▲",
-  down: "▼",
-  left: "◀",
-  right: "▶",
+// One glyph rotated four ways — identical size in every direction (the
+// dedicated ←→ glyphs render wider than ↑↓ in most fonts).
+const ARROW_ROT: Record<Dir, string> = {
+  up: "",
+  right: "rotate-90",
+  down: "rotate-180",
+  left: "-rotate-90",
 };
+
+function Arrow({ dir }: { dir: Dir }) {
+  return <span className={`inline-block ${ARROW_ROT[dir]}`}>↑</span>;
+}
 
 const KEYMAP: Record<string, Dir> = {
   ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
@@ -375,7 +381,7 @@ export function SequenceGame() {
                     }`}
                     aria-hidden
                   >
-                    {entered || !hidden ? GLYPH[dir] : "▪"}
+                    {entered || !hidden ? <Arrow dir={dir} /> : "▪"}
                   </span>
                 );
               })}
@@ -418,7 +424,7 @@ function DPadButton({ dir, onDir }: { dir: Dir; onDir: (d: Dir) => void }) {
       }}
       className="flex h-14 items-center justify-center rounded-lg border-2 border-line bg-panel2 font-display text-xl text-paper shadow-chunk-sm transition-transform active:translate-y-0.5 active:shadow-none"
     >
-      {GLYPH[dir]}
+      <Arrow dir={dir} />
     </button>
   );
 }

@@ -1,0 +1,524 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { IntroScreen } from "@/components/IntroScreen";
+import { ResultScreen } from "@/components/ResultScreen";
+import { TimerBar } from "@/components/TimerBar";
+import { Lives } from "@/components/Lives";
+import { sfx } from "@/lib/audio";
+import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
+import { useCountdown } from "@/lib/useCountdown";
+import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
+import {
+  bumpStreak,
+  getBest,
+  setDailyResult,
+  submitBest,
+} from "@/lib/storage";
+
+const ROUNDS = 14;
+const LIVES = 3;
+
+/** A sequence term: plain text, or a glyph at a rotation (arrow patterns). */
+type Term = { text: string } | { glyph: string; deg: number };
+
+function termKey(t: Term): string {
+  return "text" in t ? t.text : `${t.glyph}@${((t.deg % 360) + 360) % 360}`;
+}
+
+const SHAPES = ["●", "■", "▲", "★", "◆"] as const;
+const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+interface Generated {
+  terms: Term[];
+  answer: Term;
+  /** Plausible wrong answers, best traps first. Deduped later. */
+  wrongs: Term[];
+}
+
+type PatternKind =
+  | "shapeCycle"
+  | "arithmetic"
+  | "repeatDigits"
+  | "letterSkip"
+  | "geometric"
+  | "rotation"
+  | "secondDiff"
+  | "interleave"
+  | "letterGrow";
+
+const num = (n: number): Term => ({ text: String(n) });
+const letter = (i: number): Term => ({ text: ALPHA[i] });
+
+const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
+  /** ● ■ ▲ ● ■ → ▲ — a repeating cycle of 2 or 3 shapes. */
+  shapeCycle(rng) {
+    const period = randInt(rng, 2, 3);
+    const cycle = shuffle(rng, SHAPES).slice(0, period);
+    const terms = Array.from({ length: 5 }, (_, i) => ({
+      text: cycle[i % period],
+    }));
+    const answer = { text: cycle[5 % period] };
+    const wrongs = SHAPES.filter((s) => s !== answer.text).map((s) => ({
+      text: s,
+    }));
+    return { terms, answer, wrongs };
+  },
+
+  /** Constant step, up or down. */
+  arithmetic(rng) {
+    const down = rng() < 0.3;
+    const d = randInt(rng, 2, 9) * (down ? -1 : 1);
+    const a = down ? randInt(rng, 40, 60) : randInt(rng, 1, 12);
+    const terms = [0, 1, 2, 3].map((i) => num(a + i * d));
+    const ans = a + 4 * d;
+    return {
+      terms,
+      answer: num(ans),
+      wrongs: [num(ans + d), num(ans - 1), num(ans + 1), num(a + 3 * d)],
+    };
+  },
+
+  /** 1, 22, 333, 4444 → 55555. */
+  repeatDigits(rng) {
+    const start = randInt(rng, 1, 5);
+    const terms = [0, 1, 2, 3].map((i) => ({
+      text: String(start + i).repeat(i + 1),
+    }));
+    const ansDigit = start + 4;
+    return {
+      terms,
+      answer: { text: String(ansDigit).repeat(5) },
+      wrongs: [
+        { text: String(ansDigit).repeat(4) },
+        { text: String(ansDigit).repeat(6) },
+        { text: String(Math.min(9, ansDigit + 1)).repeat(5) },
+        { text: String(ansDigit - 1).repeat(5) },
+      ],
+    };
+  },
+
+  /** C, F, I, L → O — constant letter step. */
+  letterSkip(rng) {
+    const d = randInt(rng, 1, 4);
+    const start = randInt(rng, 0, 25 - 4 * d);
+    const terms = [0, 1, 2, 3].map((i) => letter(start + i * d));
+    const ansIdx = start + 4 * d;
+    const wrongIdxs = [ansIdx - 1, ansIdx + 1, ansIdx + d, ansIdx - d].filter(
+      (i) => i >= 0 && i < 26 && i !== ansIdx
+    );
+    return {
+      terms,
+      answer: letter(ansIdx),
+      wrongs: wrongIdxs.map(letter),
+    };
+  },
+
+  /** Multiply by 2 or 3 each step. */
+  geometric(rng) {
+    const r = rng() < 0.6 ? 2 : 3;
+    const a = randInt(rng, 1, r === 3 ? 3 : 5);
+    const terms = [0, 1, 2, 3].map((i) => num(a * r ** i));
+    const ans = a * r ** 4;
+    const last = a * r ** 3;
+    return {
+      terms,
+      answer: num(ans),
+      wrongs: [num(last + last / 2), num(ans + a * r), num(last * (r + 1)), num(ans - a)],
+    };
+  },
+
+  /** An arrow rotating a fixed amount each step. */
+  rotation(rng) {
+    const step = pick(rng, [45, 90, -45, -90]);
+    const start = randInt(rng, 0, 7) * 45;
+    const degs = [0, 1, 2, 3].map((i) => start + i * step);
+    const ansDeg = start + 4 * step;
+    const arrow = (deg: number): Term => ({ glyph: "➤", deg });
+    const wrongDegs = [ansDeg - step, ansDeg + 180, ansDeg + step].filter(
+      (d) => termKey(arrow(d)) !== termKey(arrow(ansDeg))
+    );
+    return {
+      terms: degs.map(arrow),
+      answer: arrow(ansDeg),
+      wrongs: wrongDegs.map(arrow),
+    };
+  },
+
+  /** Steps that grow: +2, +4, +6 → the classic "it was accelerating" trap. */
+  secondDiff(rng) {
+    const a = randInt(rng, 1, 10);
+    const d = randInt(rng, 1, 4);
+    const k = randInt(rng, 1, 3);
+    const t1 = a + d;
+    const t2 = t1 + d + k;
+    const t3 = t2 + d + 2 * k;
+    const ans = t3 + d + 3 * k;
+    return {
+      terms: [num(a), num(t1), num(t2), num(t3)],
+      answer: num(ans),
+      wrongs: [num(t3 + d + 2 * k), num(ans + 1), num(ans - 1), num(ans + k)],
+    };
+  },
+
+  /** Two sequences woven together: 1, 10, 3, 20, 5 → 30. */
+  interleave(rng) {
+    const a = randInt(rng, 1, 9);
+    const d = randInt(rng, 1, 5);
+    const b = randInt(rng, 10, 30);
+    const e = randInt(rng, 3, 10);
+    const terms = [num(a), num(b), num(a + d), num(b + e), num(a + 2 * d)];
+    const ans = b + 2 * e;
+    return {
+      terms,
+      answer: num(ans),
+      wrongs: [num(a + 3 * d), num(ans + d), num(ans - e), num(ans + 1)],
+    };
+  },
+
+  /** Gaps that grow by one letter each time: A, B, D, G, K → P. */
+  letterGrow(rng) {
+    const start = randInt(rng, 0, 10);
+    const idxs = [start];
+    for (let gap = 1; gap <= 4; gap++) idxs.push(idxs[idxs.length - 1] + gap);
+    const ansIdx = idxs[4] + 5;
+    const lastGapRepeat = idxs[4] + 4; // the "constant gap" trap
+    const wrongIdxs = [lastGapRepeat, ansIdx - 1, ansIdx + 1].filter(
+      (i) => i < 26 && i !== ansIdx
+    );
+    return {
+      terms: idxs.map(letter),
+      answer: letter(ansIdx),
+      wrongs: wrongIdxs.map(letter),
+    };
+  },
+};
+
+/** Warm-up cycles and simple runs → letters and spins → layered rules. */
+function roundPlan(i: number): { kind: PatternKind; duration: number } {
+  const plans: { kind: PatternKind; duration: number }[] = [
+    { kind: "shapeCycle", duration: 8 },
+    { kind: "arithmetic", duration: 8 },
+    { kind: "repeatDigits", duration: 8 },
+    { kind: "arithmetic", duration: 7.5 },
+    { kind: "letterSkip", duration: 9 },
+    { kind: "geometric", duration: 8 },
+    { kind: "rotation", duration: 8 },
+    { kind: "secondDiff", duration: 10 },
+    { kind: "interleave", duration: 11 },
+    { kind: "letterGrow", duration: 10 },
+    { kind: "geometric", duration: 7 },
+    { kind: "rotation", duration: 7.5 },
+    { kind: "secondDiff", duration: 9 },
+    { kind: "interleave", duration: 10 },
+  ];
+  return plans[i];
+}
+
+interface PatternRound {
+  terms: Term[];
+  options: Term[]; // 4, shuffled
+  answerIdx: number; // index into options
+  duration: number;
+}
+
+function generateRound(rng: Rng, i: number): PatternRound {
+  const plan = roundPlan(i);
+  const g = GENERATORS[plan.kind](rng);
+  const seen = new Set([termKey(g.answer)]);
+  const wrongs: Term[] = [];
+  for (const w of g.wrongs) {
+    if (!seen.has(termKey(w))) {
+      seen.add(termKey(w));
+      wrongs.push(w);
+    }
+    if (wrongs.length === 3) break;
+  }
+  // Fallback filler for the rare generator that deduped below 3.
+  let bump = 2;
+  while (wrongs.length < 3) {
+    const base = g.answer;
+    const w: Term =
+      "text" in base && /^\d+$/.test(base.text)
+        ? num(Number(base.text) + bump * 3)
+        : "text" in base
+          ? { text: pick(rng, SHAPES) }
+          : { glyph: base.glyph, deg: base.deg + bump * 45 };
+    if (!seen.has(termKey(w))) {
+      seen.add(termKey(w));
+      wrongs.push(w);
+    }
+    bump++;
+  }
+  const options = shuffle(rng, [g.answer, ...wrongs]);
+  return {
+    terms: g.terms,
+    options,
+    answerIdx: options.findIndex((o) => termKey(o) === termKey(g.answer)),
+    duration: plan.duration,
+  };
+}
+
+function generateRounds(rng: Rng): PatternRound[] {
+  return Array.from({ length: ROUNDS }, (_, i) => generateRound(rng, i));
+}
+
+function TermView({ term, large }: { term: Term; large?: boolean }) {
+  if ("text" in term) {
+    return <span className={large ? "text-2xl" : ""}>{term.text}</span>;
+  }
+  return (
+    <span
+      className={`inline-block ${large ? "text-2xl" : ""}`}
+      style={{ transform: `rotate(${term.deg}deg)` }}
+      aria-label={`arrow at ${((term.deg % 360) + 360) % 360} degrees`}
+    >
+      {term.glyph}
+    </span>
+  );
+}
+
+type Phase = "intro" | "scan" | "gap" | "result";
+
+interface Gap {
+  ok: boolean;
+  msg: string;
+}
+
+export function PatternGame() {
+  const [phase, setPhase] = useState<Phase>("intro");
+  const [mode, setMode] = useState<Mode>("daily");
+  const [round, setRound] = useState(0);
+  const [lives, setLives] = useState(LIVES);
+  const [gap, setGap] = useState<Gap | null>(null);
+  const [newBest, setNewBest] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [survived, setSurvived] = useState(false);
+  // Render-facing copies: the same data also lives in refs for game logic.
+  const [rounds, setRounds] = useState<PatternRound[]>([]);
+  const [summary, setSummary] = useState<{ score: number; emojis: string[] }>({
+    score: 0,
+    emojis: [],
+  });
+
+  // Game logic runs off refs so timer callbacks never read stale data.
+  const roundsRef = useRef<PatternRound[]>([]);
+  const roundRef = useRef(0);
+  const livesRef = useRef(LIVES);
+  const resultsRef = useRef<boolean[]>([]);
+  const modeRef = useRef<Mode>("daily");
+  const lockedRef = useRef(false);
+  const phaseRef = useRef<Phase>("intro");
+  const gapTimeoutRef = useRef(0);
+  const timer = useCountdown();
+
+  function setPhaseSafe(p: Phase) {
+    phaseRef.current = p;
+    setPhase(p);
+  }
+
+  function finish(didSurvive: boolean) {
+    timer.stop();
+    window.clearTimeout(gapTimeoutRef.current);
+    const score = resultsRef.current.filter(Boolean).length;
+    const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
+    const display = `${score}/${ROUNDS}`;
+    const isBest = submitBest("pattern", modeRef.current, { score, display });
+    if (modeRef.current === "daily") {
+      setDailyResult("pattern", dailyNumber(), {
+        display,
+        emojis: emojis.join(""),
+      });
+      setStreak(bumpStreak());
+    }
+    setSummary({ score, emojis });
+    setNewBest(isBest);
+    setSurvived(didSurvive);
+    setPhaseSafe("result");
+    if (didSurvive) sfx.fanfare();
+    else sfx.gameOver();
+  }
+
+  function endRound(correct: boolean, msg: string) {
+    if (lockedRef.current) return;
+    lockedRef.current = true;
+    timer.stop();
+    resultsRef.current.push(correct);
+    if (!correct) livesRef.current -= 1;
+    setLives(livesRef.current);
+    setGap({ ok: correct, msg });
+    setPhaseSafe("gap"); // options stay visible; the right one gets ringed
+    if (correct) sfx.success();
+    else sfx.error();
+
+    gapTimeoutRef.current = window.setTimeout(
+      () => {
+        if (livesRef.current <= 0) {
+          finish(false);
+        } else if (roundRef.current + 1 >= ROUNDS) {
+          finish(true);
+        } else {
+          roundRef.current += 1;
+          lockedRef.current = false;
+          setRound(roundRef.current);
+          setGap(null);
+          beginRound();
+        }
+      },
+      correct ? 650 : 1300
+    );
+  }
+
+  function beginRound() {
+    sfx.reveal();
+    setPhaseSafe("scan");
+    timer.start(roundsRef.current[roundRef.current].duration, () =>
+      endRound(false, "TOO SLOW!")
+    );
+  }
+
+  function handlePick(optionIdx: number) {
+    if (lockedRef.current || phaseRef.current !== "scan") return;
+    const r = roundsRef.current[roundRef.current];
+    sfx.tap();
+    if (optionIdx === r.answerIdx) {
+      endRound(true, "NICE ✅");
+    } else {
+      endRound(false, "NOPE — IT'S RINGED");
+    }
+  }
+
+  function startRun(m: Mode) {
+    const generated = generateRounds(rngFor("pattern", m));
+    roundsRef.current = generated;
+    setRounds(generated);
+    resultsRef.current = [];
+    livesRef.current = LIVES;
+    roundRef.current = 0;
+    lockedRef.current = false;
+    modeRef.current = m;
+    setMode(m);
+    setLives(LIVES);
+    setRound(0);
+    setGap(null);
+    setNewBest(false);
+    setSurvived(false);
+    beginRound();
+  }
+
+  // Desktop: keys 1–4 pick the four options.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const idx = ["1", "2", "3", "4"].indexOf(e.key);
+      if (idx >= 0) handlePick(idx);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Clean up the gap timeout if the player navigates away mid-run.
+  useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
+
+  if (phase === "intro") {
+    return (
+      <IntroScreen
+        game="pattern"
+        title="NEXT!"
+        icon="🧩"
+        tagline="Crack the rule before the clock does."
+        howTo={[
+          "A sequence appears — numbers, letters, shapes, or spinning arrows. Work out the rule.",
+          "Tap what comes next. The wrong options are the mistakes you were about to make.",
+        ]}
+        controlsHint="Tap an answer · keys 1–4 on desktop"
+        onStart={startRun}
+      />
+    );
+  }
+
+  if (phase === "result") {
+    return (
+      <ResultScreen
+        gameName="Next!"
+        path="/pattern"
+        mode={mode}
+        dailyNum={dailyNumber()}
+        scoreLine={`${summary.score}/${ROUNDS} 🧩`}
+        emojis={summary.emojis}
+        survived={survived}
+        newBest={newBest}
+        bestDisplay={getBest("pattern", mode)?.display ?? null}
+        streak={streak}
+        onPlayAgain={() => startRun(mode)}
+      />
+    );
+  }
+
+  const r = rounds[round];
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 py-4">
+      <div className="flex items-center justify-between">
+        <span className="font-display text-xs text-fog">
+          PATTERN {round + 1}/{ROUNDS}
+        </span>
+        <Lives lives={lives} />
+      </div>
+
+      <TimerBar progress={phase === "scan" ? timer.progress : 1} />
+
+      {/* The sequence */}
+      <div className="relative flex min-h-32 flex-wrap items-center justify-center gap-2 rounded-2xl border-2 border-line bg-panel p-5 shadow-chunk">
+        {r?.terms.map((term, i) => (
+          <span
+            key={i}
+            className="flex h-14 min-w-14 items-center justify-center rounded-xl border-2 border-line bg-panel2 px-2 font-display text-xl"
+          >
+            <TermView term={term} />
+          </span>
+        ))}
+        <span className="flex h-14 min-w-14 items-center justify-center rounded-xl border-2 border-lemon bg-panel2 px-2 font-display text-xl text-lemon">
+          ?
+        </span>
+
+        {phase === "gap" && gap && (
+          <div className="absolute inset-x-0 -top-3 z-20 flex justify-center">
+            <p
+              className={`animate-pop rounded-xl border-2 px-4 py-1 font-display text-sm backdrop-blur ${
+                gap.ok
+                  ? "border-mint bg-ink/80 text-mint"
+                  : "border-coral bg-ink/80 text-coral"
+              }`}
+            >
+              {gap.msg}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Options — during the gap, the correct one gets ringed */}
+      <div className="grid grid-cols-2 gap-3">
+        {r?.options.map((option, i) => (
+          <button
+            key={i}
+            type="button"
+            disabled={phase !== "scan"}
+            onPointerDown={() => handlePick(i)}
+            className={`h-16 rounded-2xl border-2 font-display text-xl text-paper shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-60 ${
+              phase === "gap" && i === r.answerIdx
+                ? "border-mint bg-panel2 ring-4 ring-mint/60"
+                : "border-line bg-panel2"
+            }`}
+          >
+            <TermView term={option} large />
+          </button>
+        ))}
+      </div>
+
+      <p className="text-center text-xs text-fog">
+        the rule can hide in gaps, growth, or every other term
+      </p>
+    </div>
+  );
+}
