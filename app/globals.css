@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------------
+   OVERLOAD design tokens — the single source of truth for the look.
+   Tailwind v4 turns these into utilities: bg-ink, text-lemon, font-display…
+   ------------------------------------------------------------------------ */
+@theme {
+  /* Surfaces */
+  --color-ink: #140f2d; /* page background — deep indigo */
+  --color-panel: #1e1745; /* card / panel surface */
+  --color-panel2: #2b2060; /* raised surface */
+  --color-line: #3d2f85; /* borders and dividers */
+
+  /* Text */
+  --color-paper: #f4f1ff; /* primary text */
+  --color-fog: #a79ed4; /* muted text */
+
+  /* Accents */
+  --color-lemon: #ffd23f;
+  --color-coral: #ff5d73;
+  --color-mint: #3ddc97;
+  --color-sky: #4f9bff;
+
+  /* Simon button colors */
+  --color-btn-red: #ff4757;
+  --color-btn-blue: #2f6bff;
+  --color-btn-green: #2ed573;
+  --color-btn-yellow: #ffd23f;
+
+  /* Chunky arcade drop shadow */
+  --shadow-chunk: 0 5px 0 rgb(0 0 0 / 0.4);
+  --shadow-chunk-sm: 0 3px 0 rgb(0 0 0 / 0.4);
+}
+
+@theme inline {
+  --font-display: var(--font-bungee), system-ui, sans-serif;
+  --font-sans: var(--font-grotesk), system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+  /* Subtle arcade scanline texture */
+  background-image: radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      rgb(79 60 190 / 0.35),
+      transparent
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 3px,
+      rgb(0 0 0 / 0.07) 3px,
+      rgb(0 0 0 / 0.07) 4px
+    );
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 3px solid var(--color-lemon);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Don't let taps scroll/zoom the page inside game surfaces */
+.touch-surface {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ------------------------------------------------------------- animations */
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+.animate-shake {
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop {
+  animation: pop-in 0.22s ease-out both;
+}
+
+@keyframes stamp-in {
+  0% { transform: rotate(-14deg) scale(2.2); opacity: 0; }
+  100% { transform: rotate(-6deg) scale(1); opacity: 1; }
+}
+.animate-stamp {
+  animation: stamp-in 0.16s ease-in both;
+}
+
+@keyframes flash-fade {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+.animate-flash {
+  animation: flash-fade 0.5s ease-out both;
+  pointer-events: none;
+}
+
+@keyframes rise {
+  0% { transform: translateY(14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-rise {
+  animation: rise 0.3s ease-out both;
+}
+
+/* Headcount "spinning" numbers. Starts and ends at a 12° tilt so that when
+   prefers-reduced-motion collapses the animation, spinners freeze visibly
+   TILTED — the question stays answerable without motion. */
+@keyframes count-spin {
+  from { transform: rotate(12deg); }
+  to { transform: rotate(372deg); }
+}
+.animate-count-spin {
+  animation: count-spin 1.6s linear infinite both;
+}
+
+/* Respect prefers-reduced-motion: collapse all animation to near-instant */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

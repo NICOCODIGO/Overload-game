@@ -1,0 +1,73 @@
+/**
+ * Deterministic RNG for daily challenges.
+ *
+ * mulberry32 seeded via the xmur3 string hash. Given the same seed string,
+ * every player on the planet generates the identical game — that's what makes
+ * the daily challenge shareable.
+ */
+
+/** xmur3: hashes a string into a 32-bit seed generator. */
+function xmur3(str: string): () => number {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return (h ^= h >>> 16) >>> 0;
+  };
+}
+
+/** mulberry32: fast 32-bit PRNG, returns floats in [0, 1). */
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export type Rng = () => number;
+
+/** RNG from an arbitrary string seed. */
+export function rngFromString(seed: string): Rng {
+  return mulberry32(xmur3(seed)());
+}
+
+/** Random integer in [min, max] inclusive. */
+export function randInt(rng: Rng, min: number, max: number): number {
+  return min + Math.floor(rng() * (max - min + 1));
+}
+
+/** Pick a random element. */
+export function pick<T>(rng: Rng, arr: readonly T[]): T {
+  return arr[Math.floor(rng() * arr.length)];
+}
+
+/** Fisher–Yates shuffle (returns a new array). */
+export function shuffle<T>(rng: Rng, arr: readonly T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/**
+ * Derangement: shuffle until no element sits at its original index.
+ * Used for Stroop label scrambles — a label must never match its button color.
+ */
+export function derange<T>(rng: Rng, arr: readonly T[]): T[] {
+  for (let tries = 0; tries < 50; tries++) {
+    const out = shuffle(rng, arr);
+    if (out.every((v, i) => v !== arr[i])) return out;
+  }
+  // Fallback: rotate by one — always a valid derangement for distinct items.
+  return [...arr.slice(1), arr[0]];
+}
