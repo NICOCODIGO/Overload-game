@@ -1,11 +1,28 @@
 "use client";
 
+import type { GameId } from "@/lib/daily";
 import { GameCard } from "./GameCard";
+import { PixelIcon } from "./PixelIcon";
+import { SocialLinks } from "./SocialLinks";
 import { getStreak } from "@/lib/storage";
 import { useClientValue } from "@/lib/hooks";
+import { useT } from "@/lib/i18n";
+
+const GAMES: { game: GameId; href: string; title: string; accent: string }[] = [
+  { game: "simon", href: "/simon", title: "SIMON SAYS", accent: "text-coral" },
+  { game: "sequence", href: "/sequence", title: "SIGNAL RUSH", accent: "text-mint" },
+  { game: "typing", href: "/typing", title: "PANIC TYPE", accent: "text-sky" },
+  { game: "clock", href: "/clock", title: "OVERCLOCKED", accent: "text-lemon" },
+  { game: "anomaly", href: "/anomaly", title: "ANOMALY", accent: "text-coral" },
+  { game: "count", href: "/count", title: "HEADCOUNT", accent: "text-mint" },
+  { game: "pattern", href: "/pattern", title: "NEXT!", accent: "text-sky" },
+  { game: "illusion", href: "/illusion", title: "DOUBLE TAKE", accent: "text-lemon" },
+  { game: "blink", href: "/blink", title: "BLINK", accent: "text-coral" },
+];
 
 export function ArcadeGrid() {
   const streak = useClientValue(getStreak, 0);
+  const t = useT();
 
   return (
     <div className="animate-rise flex flex-1 flex-col justify-center gap-8 py-10">
@@ -16,95 +33,24 @@ export function ArcadeGrid() {
             LOAD
           </span>
         </h1>
-        <p className="mt-3 text-fog">
-          Nine ways to fry your brain. New daily challenges at midnight UTC.
-        </p>
+        <p className="mt-3 text-fog">{t.tagline}</p>
         {streak > 0 && (
-          <p className="mt-1 font-display text-sm text-coral">
-            🔥 {streak}-day streak — keep it alive
+          <p className="mt-1 flex items-center justify-center gap-1.5 font-display text-sm text-coral">
+            <PixelIcon name="flame" size={16} />
+            {t.streakAlive(streak)}
           </p>
         )}
       </div>
 
       <div className="grid gap-5 sm:grid-cols-3">
-        <GameCard
-          game="simon"
-          href="/simon"
-          icon="🫵"
-          title="SIMON SAYS"
-          hook="Only obey when Simon says. The buttons will lie to you."
-          accent="text-coral"
-        />
-        <GameCard
-          game="sequence"
-          href="/sequence"
-          icon="📡"
-          title="SIGNAL RUSH"
-          hook="Intercept the code. Re-key it before the channel closes."
-          accent="text-mint"
-        />
-        <GameCard
-          game="typing"
-          href="/typing"
-          icon="⌨️"
-          title="PANIC TYPE"
-          hook="Type it exactly. The clock has no mercy."
-          accent="text-sky"
-        />
-        <GameCard
-          game="clock"
-          href="/clock"
-          icon="🕐"
-          title="OVERCLOCKED"
-          hook="Quick — what time is it? The hands won't wait."
-          accent="text-lemon"
-        />
-        <GameCard
-          game="anomaly"
-          href="/anomaly"
-          icon="🔎"
-          title="ANOMALY"
-          hook="One of them doesn't belong. Find it before the feed cuts."
-          accent="text-coral"
-        />
-        <GameCard
-          game="count"
-          href="/count"
-          icon="🔢"
-          title="HEADCOUNT"
-          hook="Count the chaos — but only the ones we ask for."
-          accent="text-mint"
-        />
-        <GameCard
-          game="pattern"
-          href="/pattern"
-          icon="🧩"
-          title="NEXT!"
-          hook="2, 4, 8, 16… the pattern knows what comes next. Do you?"
-          accent="text-sky"
-        />
-        <GameCard
-          game="illusion"
-          href="/illusion"
-          icon="👁️"
-          title="DOUBLE TAKE"
-          hook="Your eyes are lying. Answer anyway."
-          accent="text-lemon"
-        />
-        <GameCard
-          game="blink"
-          href="/blink"
-          icon="👀"
-          title="BLINK"
-          hook="The scene flickers. One thing changed. Find it."
-          accent="text-coral"
-        />
+        {GAMES.map((g) => (
+          <GameCard key={g.game} {...g} hook={t.hooks[g.game]} />
+        ))}
       </div>
 
-      <p className="text-center text-xs text-fog">
-        Personal bests and streaks live in your browser. No accounts, no
-        tracking — just stress.
-      </p>
+      <p className="text-center text-xs text-fog">{t.footerNote}</p>
+
+      <SocialLinks />
     </div>
   );
 }

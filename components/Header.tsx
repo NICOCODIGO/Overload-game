@@ -1,75 +1,66 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { toggleMuted, unlockAudio } from "@/lib/audio";
+import { unlockAudio, toggleMuted } from "@/lib/audio";
 import { getStreak } from "@/lib/storage";
 import { useClientValue, useMuted } from "@/lib/hooks";
+import { cycleLang, useLang, useT } from "@/lib/i18n";
+import { PixelIcon } from "./PixelIcon";
 
-const GAMES = [
-  { href: "/simon", label: "SIMON" },
-  { href: "/sequence", label: "SIGNAL" },
-  { href: "/typing", label: "TYPE" },
-  { href: "/clock", label: "CLOCK" },
-  { href: "/anomaly", label: "SPOT" },
-  { href: "/count", label: "COUNT" },
-  { href: "/pattern", label: "NEXT" },
-  { href: "/illusion", label: "EYES" },
-  { href: "/blink", label: "BLINK" },
-] as const;
-
+/**
+ * Slim full-width status bar: logo hard left (and the way home), language +
+ * streak + sound hard right. Game switching lives on the arcade floor.
+ */
 export function Header() {
-  const pathname = usePathname();
   const muted = useMuted();
+  const lang = useLang();
+  const t = useT();
   const streak = useClientValue(getStreak, 0);
 
   return (
     <header className="sticky top-0 z-40 border-b-2 border-line bg-ink/90 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
+      <div className="flex w-full items-center justify-between gap-4 px-5 py-4 sm:px-6">
         <Link
           href="/"
-          className="font-display text-lg tracking-wide text-lemon drop-shadow-[2px_2px_0_var(--color-coral)]"
+          className="font-display text-xl tracking-wide text-lemon drop-shadow-[2px_2px_0_var(--color-coral)] sm:text-2xl"
         >
           OVERLOAD
         </Link>
 
-        <nav className="flex flex-1 items-center gap-1 overflow-x-auto">
-          {GAMES.map((g) => (
-            <Link
-              key={g.href}
-              href={g.href}
-              className={`rounded-md px-2 py-1 font-display text-[11px] tracking-wider transition-colors ${
-                pathname === g.href
-                  ? "bg-panel2 text-lemon"
-                  : "text-fog hover:text-paper"
-              }`}
+        <div className="flex items-center gap-3">
+          {streak > 0 && (
+            <span
+              className="flex h-11 items-center gap-1.5 font-display text-sm text-coral"
+              title={t.streak(streak)}
+              aria-label={t.streak(streak)}
             >
-              {g.label}
-            </Link>
-          ))}
-        </nav>
+              <PixelIcon name="flame" size={20} />
+              {streak}
+            </span>
+          )}
 
-        {streak > 0 && (
-          <span
-            className="font-display text-xs text-coral"
-            title={`${streak}-day streak`}
-            aria-label={`${streak} day streak`}
+          <button
+            type="button"
+            onClick={cycleLang}
+            aria-label={t.changeLang}
+            className="flex h-11 items-center gap-2 rounded-lg border-2 border-line bg-panel px-3 font-display text-sm text-paper shadow-chunk-sm transition-transform hover:bg-panel2 active:translate-y-0.5 active:shadow-none"
           >
-            🔥{streak}
-          </span>
-        )}
+            <PixelIcon name="globe" size={18} />
+            {lang.toUpperCase()}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            unlockAudio();
-            toggleMuted();
-          }}
-          aria-label={muted ? "Unmute sounds" : "Mute sounds"}
-          className="rounded-md border-2 border-line bg-panel px-2 py-1 text-sm hover:bg-panel2"
-        >
-          {muted ? "🔇" : "🔊"}
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              unlockAudio();
+              toggleMuted();
+            }}
+            aria-label={muted ? t.unmute : t.mute}
+            className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-line bg-panel shadow-chunk-sm transition-transform hover:bg-panel2 active:translate-y-0.5 active:shadow-none"
+          >
+            <PixelIcon name={muted ? "muted" : "sound"} size={22} />
+          </button>
+        </div>
       </div>
     </header>
   );

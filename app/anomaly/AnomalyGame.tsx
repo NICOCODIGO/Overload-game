@@ -289,7 +289,6 @@ export function AnomalyGame() {
       <IntroScreen
         game="anomaly"
         title="ANOMALY"
-        icon="🔎"
         tagline="Anomaly detection under pressure. One doesn't belong."
         howTo={[
           "One thing in the crowd doesn't match — find it and tap it before the feed cuts out.",
@@ -304,11 +303,12 @@ export function AnomalyGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="anomaly"
         gameName="Anomaly"
         path="/anomaly"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS} 🔎`}
+        scoreLine={`${summary.score}/${ROUNDS}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

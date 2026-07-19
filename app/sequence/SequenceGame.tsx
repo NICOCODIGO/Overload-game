@@ -286,7 +286,6 @@ export function SequenceGame() {
       <IntroScreen
         game="sequence"
         title="SIGNAL RUSH"
-        icon="📡"
         tagline="Crack the intercepted code before the channel closes."
         howTo={[
           "Key in the arrow code, in order, before the channel closes.",
@@ -301,11 +300,12 @@ export function SequenceGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="sequence"
         gameName="Signal Rush"
         path="/sequence"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`Level ${summary.cleared} ⚡`}
+        scoreLine={`Level ${summary.cleared}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

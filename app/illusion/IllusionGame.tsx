@@ -296,7 +296,7 @@ export function IllusionGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.tap();
     if (idx === r.truth) {
-      endRound(true, r.truth === 1 ? "CORRECT — SAME ✅" : "CORRECT ✅");
+      endRound(true, r.truth === 1 ? "CORRECT — SAME ✓" : "CORRECT ✓");
     } else {
       const { labels } = QUESTIONS[r.type];
       endRound(
@@ -343,7 +343,6 @@ export function IllusionGame() {
       <IntroScreen
         game="illusion"
         title="DOUBLE TAKE"
-        icon="👁️"
         tagline="Your eyes are lying. Answer anyway."
         howTo={[
           "Every round is an optical illusion with a factual question — which is ACTUALLY longer, bigger, lighter?",
@@ -358,11 +357,12 @@ export function IllusionGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="illusion"
         gameName="Double Take"
         path="/illusion"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS} 👁️`}
+        scoreLine={`${summary.score}/${ROUNDS}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

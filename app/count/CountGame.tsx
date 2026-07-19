@@ -431,7 +431,7 @@ export function CountGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.tap();
     if (d === r.answer) {
-      endRound(true, "NICE ✅");
+      endRound(true, "NICE ✓");
     } else {
       endRound(false, `IT WAS ${r.answer}`);
     }
@@ -476,7 +476,6 @@ export function CountGame() {
       <IntroScreen
         game="count"
         title="HEADCOUNT"
-        icon="🔢"
         tagline="Count the chaos. Answer in one tap."
         howTo={[
           "A mob of numbers and shapes appears — count only what the question asks for.",
@@ -491,11 +490,12 @@ export function CountGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="count"
         gameName="Headcount"
         path="/count"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS} 🔢`}
+        scoreLine={`${summary.score}/${ROUNDS}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

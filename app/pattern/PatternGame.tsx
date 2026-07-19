@@ -382,7 +382,7 @@ export function PatternGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.tap();
     if (optionIdx === r.answerIdx) {
-      endRound(true, "NICE ✅");
+      endRound(true, "NICE ✓");
     } else {
       endRound(false, "NOPE — IT'S RINGED");
     }
@@ -425,7 +425,6 @@ export function PatternGame() {
       <IntroScreen
         game="pattern"
         title="NEXT!"
-        icon="🧩"
         tagline="Crack the rule before the clock does."
         howTo={[
           "A sequence appears — numbers, letters, shapes, or spinning arrows. Work out the rule.",
@@ -440,11 +439,12 @@ export function PatternGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="pattern"
         gameName="Next!"
         path="/pattern"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS} 🧩`}
+        scoreLine={`${summary.score}/${ROUNDS}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

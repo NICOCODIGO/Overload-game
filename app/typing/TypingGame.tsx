@@ -193,7 +193,6 @@ export function TypingGame() {
       <IntroScreen
         game="typing"
         title="PANIC TYPE"
-        icon="⌨️"
         tagline="Precision typing with a gun to your deadline."
         howTo={[
           "Type each prompt exactly — capitals, punctuation, everything — before the bar empties.",
@@ -208,11 +207,12 @@ export function TypingGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="typing"
         gameName="Panic Type"
         path="/typing"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${PROMPTS} · ${summary.acc}% 🎯`}
+        scoreLine={`${summary.score}/${PROMPTS} · ${summary.acc}%`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

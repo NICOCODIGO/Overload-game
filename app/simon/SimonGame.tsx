@@ -181,7 +181,7 @@ export function SimonGame() {
         ? COLORS[buttonIndex] === cmd.target
         : cmd.labels[buttonIndex] === cmd.target;
     if (correct) {
-      advance(true, "NICE ✅");
+      advance(true, "NICE ✓");
     } else {
       advance(
         false,
@@ -219,7 +219,7 @@ export function SimonGame() {
       if (shouldHold) {
         advance(
           true,
-          cmd.kind === "wait" ? "PATIENCE PAYS ✅" : "SIMON DIDN'T SAY ✅"
+          cmd.kind === "wait" ? "PATIENCE PAYS ✓" : "SIMON DIDN'T SAY ✓"
         );
       } else {
         advance(false, "TOO SLOW!");
@@ -245,7 +245,6 @@ export function SimonGame() {
       <IntroScreen
         game="simon"
         title="SIMON SAYS"
-        icon="🫵"
         tagline="Obedience training for your reflexes."
         howTo={[
           "Only obey a card stamped SIMON SAYS — otherwise freeze and let the clock run out.",
@@ -260,11 +259,12 @@ export function SimonGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="simon"
         gameName="Simon Says"
         path="/simon"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS} 🫵`}
+        scoreLine={`${summary.score}/${ROUNDS}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

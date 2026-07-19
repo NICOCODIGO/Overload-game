@@ -261,7 +261,7 @@ export function ClockGame() {
     if (!r || lockedRef.current) return;
     sfx.tap();
     if (option === r.answer) {
-      advance(true, "NICE ✅");
+      advance(true, "NICE ✓");
     } else {
       advance(false, r.reverse ? "WRONG FACE!" : `IT WAS ${r.answer}`);
     }
@@ -306,7 +306,6 @@ export function ClockGame() {
       <IntroScreen
         game="clock"
         title="OVERCLOCKED"
-        icon="🕐"
         tagline="You learned this in second grade. Prove it."
         howTo={[
           "Tap the time that matches the clock — some rounds flip it and you pick the face that matches the time.",
@@ -321,11 +320,12 @@ export function ClockGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="clock"
         gameName="Overclocked"
         path="/clock"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS} 🕐`}
+        scoreLine={`${summary.score}/${ROUNDS}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}

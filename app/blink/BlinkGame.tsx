@@ -296,7 +296,6 @@ export function BlinkGame() {
       <IntroScreen
         game="blink"
         title="BLINK"
-        icon="👀"
         tagline="Something changed. You almost saw it."
         howTo={[
           "The scene flashes, blinks, and flashes again — one thing is different between flashes. Tap it.",
@@ -311,11 +310,12 @@ export function BlinkGame() {
   if (phase === "result") {
     return (
       <ResultScreen
+        game="blink"
         gameName="Blink"
         path="/blink"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS} 👀`}
+        scoreLine={`${summary.score}/${ROUNDS}`}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
