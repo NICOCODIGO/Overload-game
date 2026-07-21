@@ -26,6 +26,9 @@ export type IconName = GameId | UiIcon;
 interface IconDef {
   rows: string[];
   colors: Record<string, string>;
+  /** Per-character animation classes — lets parts of a sprite move on their
+      own (radio waves radiating, clock hands spinning…) when `animated`. */
+  parts?: Record<string, string>;
 }
 
 const INK = "var(--color-ink)";
@@ -92,8 +95,9 @@ const ICONS: Record<IconName, IconDef> = {
       "################",
     ],
     colors: { "#": MINT, o: LEMON, x: CORAL },
+    parts: { o: "px-wave-inner", x: "px-wave-outer" },
   },
-  // Keyboard with a highlighted spacebar
+  // Keyboard — keys carry three different chars so they can flash in waves
   typing: {
     rows: [
       "................",
@@ -101,9 +105,9 @@ const ICONS: Record<IconName, IconDef> = {
       "................",
       "################",
       "#..............#",
-      "#.oo.oo.oo.oo..#",
+      "#.kk.ll.mm.kk..#",
       "#..............#",
-      "#..oo.oo.oo....#",
+      "#..ll.mm.kk....#",
       "#..............#",
       "#...xxxxxxx....#",
       "#..............#",
@@ -113,7 +117,8 @@ const ICONS: Record<IconName, IconDef> = {
       "................",
       "................",
     ],
-    colors: { "#": SKY, o: PAPER, x: LEMON },
+    colors: { "#": SKY, k: PAPER, l: PAPER, m: PAPER, x: LEMON },
+    parts: { k: "px-key1", l: "px-key2", m: "px-key3", x: "px-key2" },
   },
   // Analog clock
   clock: {
@@ -136,6 +141,7 @@ const ICONS: Record<IconName, IconDef> = {
       "................",
     ],
     colors: { "#": LEMON, o: PAPER, x: CORAL },
+    parts: { o: "px-clock-hands" },
   },
   // Magnifying glass with a shine
   anomaly: {
@@ -158,11 +164,13 @@ const ICONS: Record<IconName, IconDef> = {
       "................",
     ],
     colors: { "#": SKY, o: PAPER, x: CORAL },
+    parts: { o: "px-glint" },
   },
-  // 1 2 3
+  // 1 2 3 — each digit is its own char so they can hop in order
   count: {
     rows: COUNT_ROWS,
     colors: { "#": CORAL, o: LEMON, x: MINT },
+    parts: { "#": "px-hop1", o: "px-hop2", x: "px-hop3" },
   },
   // Puzzle piece with knobs and a bottom notch
   pattern: {
@@ -448,13 +456,25 @@ export function PixelIcon({
   name,
   size = 40,
   className,
+  animated = false,
 }: {
   name: IconName;
   size?: number;
   className?: string;
+  /** Attach per-part animation classes (they only run under .group:hover). */
+  animated?: boolean;
 }) {
   const def = ICONS[name];
   const grid = def.rows.length;
+
+  // Cells grouped by character so each part can animate as one unit.
+  const cells: Record<string, { x: number; y: number }[]> = {};
+  def.rows.forEach((row, y) =>
+    [...row].forEach((ch, x) => {
+      if (ch !== ".") (cells[ch] ??= []).push({ x, y });
+    })
+  );
+
   return (
     <svg
       width={size}
@@ -464,20 +484,20 @@ export function PixelIcon({
       aria-hidden
       className={className}
     >
-      {def.rows.flatMap((row, y) =>
-        [...row].map((ch, x) =>
-          ch === "." ? null : (
+      {Object.entries(cells).map(([ch, pts]) => (
+        <g key={ch} className={animated ? def.parts?.[ch] : undefined}>
+          {pts.map((p) => (
             <rect
-              key={`${x}-${y}`}
-              x={x}
-              y={y}
+              key={`${p.x}-${p.y}`}
+              x={p.x}
+              y={p.y}
               width="1"
               height="1"
               fill={def.colors[ch]}
             />
-          )
-        )
-      )}
+          ))}
+        </g>
+      ))}
     </svg>
   );
 }

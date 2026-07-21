@@ -11,12 +11,12 @@ export function siteUrl(): string {
 
 export function buildShareText(opts: {
   gameName: string;
-  dailyNum: number | null; // null = practice run
+  dailyNum: number | null; // null = survival run
   scoreLine: string;
   emojis: string;
   path: string;
 }): string {
-  const tag = opts.dailyNum ? ` #${opts.dailyNum}` : " (practice)";
+  const tag = opts.dailyNum ? ` #${opts.dailyNum}` : " (survival)";
   const url = `${siteUrl()}${opts.path}`;
   return `Overload: ${opts.gameName}${tag} — ${opts.scoreLine} — ${opts.emojis} — beat me: ${url}`;
 }

@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import type { GameId, Mode } from "@/lib/daily";
 import { dailyNumber } from "@/lib/daily";
 import { getBest, getDailyResult, getStreak } from "@/lib/storage";
 import { useClientValue } from "@/lib/hooks";
 import { unlockAudio } from "@/lib/audio";
 import { useT } from "@/lib/i18n";
-import { PixelIcon } from "./PixelIcon";
+import { PixelIcon, type UiIcon } from "./PixelIcon";
 
 interface IntroScreenProps {
   game: GameId;
@@ -30,8 +31,8 @@ export function IntroScreen(props: IntroScreenProps) {
     null
   );
   const bestDaily = useClientValue(() => getBest(props.game, "daily"), null);
-  const bestPractice = useClientValue(
-    () => getBest(props.game, "practice"),
+  const bestSurvival = useClientValue(
+    () => getBest(props.game, "survival"),
     null
   );
   const streak = useClientValue(getStreak, 0);
@@ -40,6 +41,45 @@ export function IntroScreen(props: IntroScreenProps) {
     unlockAudio(); // user gesture — safe moment to create the AudioContext
     props.onStart(mode);
   };
+
+  // Only the stats that exist get a tile, so the row stays balanced.
+  const stats: {
+    icon: UiIcon;
+    value: string;
+    label: string;
+    color: string;
+  }[] = [
+    ...(bestDaily
+      ? [
+          {
+            icon: "trophy" as UiIcon,
+            value: bestDaily.display,
+            label: t.statDaily,
+            color: "text-lemon",
+          },
+        ]
+      : []),
+    ...(bestSurvival
+      ? [
+          {
+            icon: "target" as UiIcon,
+            value: bestSurvival.display,
+            label: t.statSurvival,
+            color: "text-mint",
+          },
+        ]
+      : []),
+    ...(streak > 0
+      ? [
+          {
+            icon: "flame" as UiIcon,
+            value: t.streakDays(streak),
+            label: t.statStreak,
+            color: "text-coral",
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="animate-rise flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
@@ -51,19 +91,31 @@ export function IntroScreen(props: IntroScreenProps) {
         <p className="mt-2 text-fog">{props.tagline}</p>
       </div>
 
-      <div className="w-full max-w-sm space-y-4 rounded-xl border-2 border-line bg-panel p-5 text-left shadow-chunk">
-        {props.howTo.map((line, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 border-mint/40 bg-panel2 font-display text-sm text-mint">
-              {i + 1}
-            </span>
-            <p className="text-sm leading-relaxed">{line}</p>
-          </div>
-        ))}
+      {/* How to play, as one short paragraph — with your record underneath,
+          so the card reads as "here's the game, here's how you've done". */}
+      <div className="w-full max-w-sm space-y-3 rounded-xl border-2 border-line bg-panel p-5 shadow-chunk">
+        <p className="text-sm leading-relaxed">{props.howTo.join(" ")}</p>
         {props.controlsHint && (
-          <p className="border-t-2 border-line pt-3 text-center text-xs text-fog">
-            {props.controlsHint}
-          </p>
+          <p className="text-xs text-fog">{props.controlsHint}</p>
+        )}
+
+        {stats.length > 0 && (
+          <div className="flex gap-2 border-t-2 border-line pt-3">
+            {stats.map((s) => (
+              <div
+                key={s.label}
+                className="flex flex-1 flex-col items-center gap-1 rounded-lg bg-panel2 px-2 py-2.5"
+              >
+                <PixelIcon name={s.icon} size={16} />
+                <span className={`font-display text-sm ${s.color}`}>
+                  {s.value}
+                </span>
+                <span className="text-center font-display text-[9px] leading-tight tracking-wider text-fog">
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -82,35 +134,20 @@ export function IntroScreen(props: IntroScreenProps) {
         </button>
         <button
           type="button"
-          onClick={() => start("practice")}
+          onClick={() => start("survival")}
           className="rounded-xl border-2 border-line bg-panel px-6 py-3 font-display text-paper shadow-chunk-sm transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none"
         >
-          {t.practice}
+          {t.survival}
           <span className="block text-xs font-sans font-normal text-fog">
-            {t.practiceSub}
+            {t.survivalSub}
           </span>
         </button>
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-xs text-fog">
-        {bestDaily && (
-          <span className="flex items-center gap-1.5">
-            <PixelIcon name="trophy" size={14} />
-            {t.dailyBest} {bestDaily.display}
-          </span>
-        )}
-        {bestPractice && (
-          <span className="flex items-center gap-1.5">
-            <PixelIcon name="target" size={14} />
-            {t.practiceBest} {bestPractice.display}
-          </span>
-        )}
-        {streak > 0 && (
-          <span className="flex items-center gap-1.5">
-            <PixelIcon name="flame" size={14} />
-            {t.streak(streak)}
-          </span>
-        )}
+        <Link
+          href="/"
+          className="py-1 text-center font-display text-xs text-fog hover:text-paper"
+        >
+          {t.backToArcade}
+        </Link>
       </div>
     </div>
   );

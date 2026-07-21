@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { IntroScreen } from "@/components/IntroScreen";
 import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
+import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/storage";
 
 const ROUNDS = 12;
+const SURVIVAL_CAP = 120;
 const LIVES = 3;
 const WRONG_TAP_PENALTY = 1.0; // seconds
 
@@ -75,7 +77,15 @@ function roundPlan(i: number): {
   if (i < 6) return { kind: "shape", count: 100 + (i - 3) * 20, duration: 7 + (i - 3) * 0.5 };
   if (i < 9)
     return { kind: "conjunction", count: 140 + (i - 6) * 25, duration: 9 + (i - 6) * 0.5 };
-  return { kind: "char", count: 150 + (i - 9) * 30, duration: 10 + (i - 9) };
+  if (i < 12) return { kind: "char", count: 150 + (i - 9) * 30, duration: 10 + (i - 9) };
+  // Survival past the daily's 12: the two hardest kinds (conjunction & char)
+  // alternate, density creeps toward a cap, time grinds down to a floor.
+  const laps = i - 12;
+  return {
+    kind: laps % 2 === 0 ? "char" : "conjunction",
+    count: Math.min(260, 210 + laps * 4),
+    duration: Math.max(5.5, 12 - laps * 0.4),
+  };
 }
 
 function generateRound(rng: Rng, i: number): SearchRound {
@@ -140,8 +150,8 @@ function generateRound(rng: Rng, i: number): SearchRound {
   return { cells, target, duration, mono, cols };
 }
 
-function generateRounds(rng: Rng): SearchRound[] {
-  return Array.from({ length: ROUNDS }, (_, i) => generateRound(rng, i));
+function generateRounds(rng: Rng, total: number): SearchRound[] {
+  return Array.from({ length: total }, (_, i) => generateRound(rng, i));
 }
 
 type Phase = "intro" | "scan" | "gap" | "result";
@@ -177,6 +187,7 @@ export function AnomalyGame() {
   const resultsRef = useRef<boolean[]>([]);
   const elapsedRef = useRef(0);
   const modeRef = useRef<Mode>("daily");
+  const totalRef = useRef(ROUNDS);
   const lockedRef = useRef(false);
   const gapTimeoutRef = useRef(0);
   const timer = useCountdown();
@@ -187,7 +198,10 @@ export function AnomalyGame() {
     const score = resultsRef.current.filter(Boolean).length;
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display = `${score}/${ROUNDS} · ${time.toFixed(1)}s`;
+    const display =
+      modeRef.current === "daily"
+        ? `${score}/${ROUNDS} · ${time.toFixed(1)}s`
+        : `${score} found · ${time.toFixed(1)}s`;
     const isBest = submitBest("anomaly", modeRef.current, {
       score,
       tiebreak: time,
@@ -227,7 +241,7 @@ export function AnomalyGame() {
       () => {
         if (livesRef.current <= 0) {
           finish(false);
-        } else if (roundRef.current + 1 >= ROUNDS) {
+        } else if (roundRef.current + 1 >= totalRef.current) {
           finish(true);
         } else {
           roundRef.current += 1;
@@ -263,7 +277,8 @@ export function AnomalyGame() {
   }
 
   function startRun(m: Mode) {
-    const generated = generateRounds(rngFor("anomaly", m));
+    totalRef.current = m === "daily" ? ROUNDS : SURVIVAL_CAP;
+    const generated = generateRounds(rngFor("anomaly", m), totalRef.current);
     roundsRef.current = generated;
     setRounds(generated);
     resultsRef.current = [];
@@ -308,7 +323,9 @@ export function AnomalyGame() {
         path="/anomaly"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS}`}
+        scoreLine={
+          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} found`
+        }
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
@@ -326,9 +343,12 @@ export function AnomalyGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-3 py-4">
+      <GameTitle game="anomaly" title="ANOMALY" />
+
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          SECTOR {round + 1}/{ROUNDS}
+          SECTOR {round + 1}
+          {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { IntroScreen } from "@/components/IntroScreen";
 import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
+import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
 import { dailyNumber, ramp, rngFor, type Mode } from "@/lib/daily";
@@ -28,6 +29,9 @@ const BUTTON_BG: Record<SimonColor, string> = {
 
 const ROUNDS = 30;
 const LIVES = 3;
+// Survival's practical "endless": 3 lives at sub-second timers never get
+// close, and finishing it is a legend-tier RUN COMPLETE.
+const SURVIVAL_CAP = 150;
 
 interface Command {
   simonSays: boolean;
@@ -41,11 +45,17 @@ interface Command {
   duration: number;
 }
 
-function generateCommands(rng: Rng): Command[] {
+function generateCommands(rng: Rng, total: number, survival: boolean): Command[] {
   const commands: Command[] = [];
   let stroopFlip = 0;
-  for (let r = 0; r < ROUNDS; r++) {
-    const duration = ramp(2.7, 1.25, r, ROUNDS);
+  for (let r = 0; r < total; r++) {
+    // Survival squeezes past the daily's 1.25s floor — but stops at 1.15s.
+    // A scrambled Stroop card costs ~400ms to read, ~250ms of interference,
+    // ~400ms to choose among four, ~150ms to tap: floor any lower and the
+    // round is unwinnable no matter how good the player is.
+    const duration = survival
+      ? Math.max(1.15, 2.7 - r * 0.055)
+      : ramp(2.7, 1.25, r, ROUNDS);
     const scrambled = r >= 4;
     const labels = scrambled ? derange(rng, COLORS) : [...COLORS];
 
@@ -112,6 +122,7 @@ export function SimonGame() {
   const livesRef = useRef(LIVES);
   const roundRef = useRef(0);
   const modeRef = useRef<Mode>("daily");
+  const totalRef = useRef(ROUNDS);
   // Blocks double-resolution of a round (e.g. key press racing timer expiry).
   const lockedRef = useRef(false);
   const timer = useCountdown();
@@ -120,7 +131,8 @@ export function SimonGame() {
     timer.stop();
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display = `${score}/${ROUNDS}`;
+    const display =
+      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} rounds`;
     const isBest = submitBest("simon", modeRef.current, { score, display });
     if (modeRef.current === "daily") {
       setDailyResult("simon", dailyNumber(), {
@@ -152,7 +164,7 @@ export function SimonGame() {
     window.setTimeout(() => {
       if (livesRef.current <= 0) {
         finish(false);
-      } else if (roundRef.current + 1 >= ROUNDS) {
+      } else if (roundRef.current + 1 >= totalRef.current) {
         finish(true);
       } else {
         roundRef.current += 1;
@@ -191,7 +203,8 @@ export function SimonGame() {
   }
 
   function startRun(m: Mode) {
-    const cmds = generateCommands(rngFor("simon", m));
+    totalRef.current = m === "daily" ? ROUNDS : SURVIVAL_CAP;
+    const cmds = generateCommands(rngFor("simon", m), totalRef.current, m !== "daily");
     commandsRef.current = cmds;
     setCommands(cmds);
     resultsRef.current = [];
@@ -264,7 +277,9 @@ export function SimonGame() {
         path="/simon"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS}`}
+        scoreLine={
+          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} rounds`
+        }
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
@@ -279,9 +294,12 @@ export function SimonGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 py-4">
+      <GameTitle game="simon" title="SIMON SAYS" />
+
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          ROUND {round + 1}/{ROUNDS}
+          ROUND {round + 1}
+          {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
       </div>

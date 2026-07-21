@@ -48,9 +48,10 @@ export function ArcadeGrid() {
         ))}
       </div>
 
-      <p className="text-center text-xs text-fog">{t.footerNote}</p>
-
-      <SocialLinks />
+      <footer className="mt-2 flex flex-col items-center gap-4 border-t-2 border-line pt-8 pb-4">
+        <p className="text-center text-xs text-fog">{t.footerNote}</p>
+        <SocialLinks />
+      </footer>
     </div>
   );
 }

@@ -17,14 +17,10 @@ interface GameCardProps {
   accent: string;
 }
 
-/* Per-game idle motion while the card is hovered (desktop only). */
-const HOVER_ANIM: Record<GameId, string> = {
-  simon: "sprite-hover-poke",
-  sequence: "sprite-hover-pulse",
-  typing: "sprite-hover-shake",
-  clock: "sprite-hover-wiggle",
-  anomaly: "sprite-hover-scan",
-  count: "sprite-hover-bounce",
+/* Whole-sprite hover motion. Games whose sprites animate their inner PARTS
+   (waves, keys, hands, glint, hops — via PixelIcon `parts`) need none. */
+const HOVER_ANIM: Partial<Record<GameId, string>> = {
+  simon: "sprite-hover-wag", // finger wags "no no"
   pattern: "sprite-hover-wiggle",
   illusion: "sprite-hover-pulse",
   blink: "sprite-hover-blink",
@@ -51,6 +47,7 @@ export function GameCard(props: GameCardProps) {
         name={props.game}
         size={44}
         className={HOVER_ANIM[props.game]}
+        animated
       />
       <span className={`font-display text-xl ${props.accent}`}>
         {props.title}

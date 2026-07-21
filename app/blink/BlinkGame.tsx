@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { IntroScreen } from "@/components/IntroScreen";
 import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
+import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/storage";
 
 const ROUNDS = 10;
+const SURVIVAL_CAP = 99;
 const LIVES = 3;
 const WRONG_TAP_PENALTY = 1.5; // seconds
 
@@ -66,9 +68,19 @@ interface BlinkRound {
 function roundPlan(i: number): { change: ChangeKind; count: number; duration: number } {
   const counts = [12, 14, 16, 16, 18, 20, 22, 24, 26, 28];
   const durations = [10, 10, 11, 11, 12, 12, 13, 13, 14, 14];
-  const change: ChangeKind =
-    i < 3 ? "color" : i < 6 ? "glyph" : i < 8 ? "size" : "subtleColor";
-  return { change, count: counts[i], duration: durations[i] };
+  if (i < counts.length) {
+    const change: ChangeKind =
+      i < 3 ? "color" : i < 6 ? "glyph" : i < 8 ? "size" : "subtleColor";
+    return { change, count: counts[i], duration: durations[i] };
+  }
+  // Survival past the daily's 10: the two subtlest changes (glyph swap &
+  // near-neighbor hue) alternate, mob toward a cap, time toward a floor.
+  const laps = i - counts.length;
+  return {
+    change: laps % 2 === 0 ? "subtleColor" : "glyph",
+    count: Math.min(40, 28 + laps),
+    duration: Math.max(7, 14 - laps * 0.3),
+  };
 }
 
 function generateRound(rng: Rng, i: number): BlinkRound {
@@ -117,8 +129,8 @@ function generateRound(rng: Rng, i: number): BlinkRound {
   };
 }
 
-function generateRounds(rng: Rng): BlinkRound[] {
-  return Array.from({ length: ROUNDS }, (_, i) => generateRound(rng, i));
+function generateRounds(rng: Rng, total: number): BlinkRound[] {
+  return Array.from({ length: total }, (_, i) => generateRound(rng, i));
 }
 
 // Flicker rhythm: frame, blank, altered frame, blank, repeat.
@@ -165,6 +177,7 @@ export function BlinkGame() {
   const resultsRef = useRef<boolean[]>([]);
   const elapsedRef = useRef(0);
   const modeRef = useRef<Mode>("daily");
+  const totalRef = useRef(ROUNDS);
   const lockedRef = useRef(false);
   const phaseRef = useRef<Phase>("intro");
   const gapTimeoutRef = useRef(0);
@@ -181,7 +194,10 @@ export function BlinkGame() {
     const score = resultsRef.current.filter(Boolean).length;
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display = `${score}/${ROUNDS} · ${time.toFixed(1)}s`;
+    const display =
+      modeRef.current === "daily"
+        ? `${score}/${ROUNDS} · ${time.toFixed(1)}s`
+        : `${score} spotted · ${time.toFixed(1)}s`;
     const isBest = submitBest("blink", modeRef.current, {
       score,
       tiebreak: time,
@@ -220,7 +236,7 @@ export function BlinkGame() {
       () => {
         if (livesRef.current <= 0) {
           finish(false);
-        } else if (roundRef.current + 1 >= ROUNDS) {
+        } else if (roundRef.current + 1 >= totalRef.current) {
           finish(true);
         } else {
           roundRef.current += 1;
@@ -257,7 +273,8 @@ export function BlinkGame() {
   }
 
   function startRun(m: Mode) {
-    const generated = generateRounds(rngFor("blink", m));
+    totalRef.current = m === "daily" ? ROUNDS : SURVIVAL_CAP;
+    const generated = generateRounds(rngFor("blink", m), totalRef.current);
     roundsRef.current = generated;
     setRounds(generated);
     resultsRef.current = [];
@@ -315,7 +332,9 @@ export function BlinkGame() {
         path="/blink"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS}`}
+        scoreLine={
+          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} spotted`
+        }
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
@@ -335,9 +354,12 @@ export function BlinkGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-3 py-4">
+      <GameTitle game="blink" title="BLINK" />
+
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          SCENE {round + 1}/{ROUNDS}
+          SCENE {round + 1}
+          {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
       </div>

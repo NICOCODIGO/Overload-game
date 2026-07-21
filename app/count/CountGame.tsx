@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { IntroScreen } from "@/components/IntroScreen";
 import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
+import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/storage";
 
 const ROUNDS = 12;
+const SURVIVAL_CAP = 120;
 const LIVES = 3;
 
 const COLORS = [
@@ -47,7 +49,9 @@ const SHAPE_NAMES: Record<string, string> = {
 
 type Size = "huge" | "normal" | "tiny";
 
-const SIZE_SCALE: Record<Size, number> = { huge: 1.75, normal: 1.0, tiny: 0.6 };
+// Wide gap on purpose: this has to read as "obviously bigger/smaller" at a
+// glance, not require a side-by-side comparison.
+const SIZE_SCALE: Record<Size, number> = { huge: 2.1, normal: 1.0, tiny: 0.5 };
 
 // Small glyphs stack above big ones so a huge one can never bury a tiny one
 // completely — every item stays countable.
@@ -76,6 +80,12 @@ type QuestionKind =
 interface QuestionPart {
   text: string;
   color?: string;
+  /** Render as a bordered chip — used for digit targets so "5" never reads
+      as part of the sentence. */
+  chip?: boolean;
+  /** Underline: marks the exact thing being counted, so "COUNT THE CORAL
+      TRIANGLES" can't be skimmed as "coral shapes". */
+  emph?: boolean;
 }
 
 interface CountRound {
@@ -110,20 +120,25 @@ function roundPlan(i: number): {
     { family: "numbers", kind: "hugeColor", count: 20, duration: 11 },
     { family: "numbers", kind: "hugeGlyph", count: 22, duration: 11 },
   ];
-  return plans[i];
-}
-
-function weightedSize(rng: Rng): Size {
-  const r = rng();
-  return r < 0.2 ? "huge" : r < 0.75 ? "normal" : "tiny";
-}
-
-function nonHugeSize(rng: Rng): Size {
-  return rng() < 0.6 ? "normal" : "tiny";
-}
-
-function nonTinySize(rng: Rng): Size {
-  return rng() < 0.75 ? "normal" : "huge";
+  if (i < plans.length) return plans[i];
+  // Survival past the daily's 12: cycle the four combo/hunt kinds forever,
+  // mob creeping toward a cap, timer grinding down to a floor.
+  const laps = i - plans.length;
+  const rotation = [
+    { family: "numbers" as Family, kind: "hugeColor" as QuestionKind },
+    { family: "shapes" as Family, kind: "glyphColor" as QuestionKind },
+    { family: "numbers" as Family, kind: "hugeGlyph" as QuestionKind },
+    { family: "numbers" as Family, kind: "glyph" as QuestionKind },
+  ];
+  // Time bottoms out at 6s (round ~32), but the mob keeps growing to 46 —
+  // so a god-tier player past round 35 still faces a rising wall: more to
+  // scan in the same seconds. Capped at 46 because beyond that the glyphs
+  // shrink below a comfortable tap/read size on a phone.
+  return {
+    ...rotation[laps % rotation.length],
+    count: Math.min(46, 22 + laps),
+    duration: Math.max(6, 11 - laps * 0.25),
+  };
 }
 
 function colorExcept(rng: Rng, avoid: number): number {
@@ -156,10 +171,12 @@ function makeItem(
 ): Omit<CountItem, "x" | "y" | "wobble"> {
   const { family, kind, pool, colorIdx, glyphIdx } = meta;
   const target = pool[glyphIdx];
+  // Default size is always "normal" — size only varies on rounds that ask
+  // about size, so it's never a red herring on a color/glyph/spin question.
   let item = {
     glyph: pick(rng, pool),
     colorIdx: randInt(rng, 0, COLORS.length - 1),
-    size: weightedSize(rng),
+    size: "normal" as Size,
     spin: family === "shapes" ? false : rng() < 0.2,
   };
   if (kind === "color") {
@@ -167,9 +184,10 @@ function makeItem(
   } else if (kind === "glyph") {
     item.glyph = match ? target : glyphExcept(rng, pool, glyphIdx);
   } else if (kind === "huge") {
-    item.size = match ? "huge" : nonHugeSize(rng);
+    // Binary field on purpose: huge vs normal, never a third tier.
+    item.size = match ? "huge" : "normal";
   } else if (kind === "tiny") {
-    item.size = match ? "tiny" : nonTinySize(rng);
+    item.size = match ? "tiny" : "normal";
   } else if (kind === "spin") {
     item.spin = match;
   } else if (kind === "hugeColor") {
@@ -177,13 +195,13 @@ function makeItem(
       item = { ...item, size: "huge", colorIdx };
     } else {
       const r = rng();
-      if (r < 0.35) item = { ...item, size: nonHugeSize(rng), colorIdx };
+      if (r < 0.35) item = { ...item, size: "normal", colorIdx };
       else if (r < 0.7)
         item = { ...item, size: "huge", colorIdx: colorExcept(rng, colorIdx) };
       else
         item = {
           ...item,
-          size: nonHugeSize(rng),
+          size: "normal",
           colorIdx: colorExcept(rng, colorIdx),
         };
     }
@@ -209,7 +227,7 @@ function makeItem(
       item = { ...item, size: "huge", glyph: target };
     } else {
       const r = rng();
-      if (r < 0.35) item = { ...item, size: nonHugeSize(rng), glyph: target };
+      if (r < 0.35) item = { ...item, size: "normal", glyph: target };
       else if (r < 0.7)
         item = {
           ...item,
@@ -219,7 +237,7 @@ function makeItem(
       else
         item = {
           ...item,
-          size: nonHugeSize(rng),
+          size: "normal",
           glyph: glyphExcept(rng, pool, glyphIdx),
         };
     }
@@ -235,35 +253,56 @@ function buildParts(meta: RoundMeta): QuestionPart[] {
     case "color":
       return [
         { text: "COUNT THE " },
-        { text: c.name, color: c.css },
+        { text: c.name, color: c.css, emph: true },
         { text: meta.family === "shapes" ? " SHAPES" : " NUMBERS" },
       ];
     case "glyph":
       return meta.family === "numbers"
-        ? [{ text: `HOW MANY ${g}s?` }]
-        : [{ text: `HOW MANY ${SHAPE_NAMES[g]}?` }];
+        ? [{ text: "HOW MANY" }, { text: g, chip: true }, { text: "?" }]
+        : [
+            { text: "HOW MANY " },
+            { text: SHAPE_NAMES[g], emph: true },
+            { text: "?" },
+          ];
     case "huge":
-      return [{ text: "COUNT THE HUGE ONES" }];
+      return [{ text: "COUNT THE " }, { text: "HUGE", emph: true }, { text: " ONES" }];
     case "tiny":
-      return [{ text: "COUNT THE TINY ONES" }];
+      return [{ text: "COUNT THE " }, { text: "TINY", emph: true }, { text: " ONES" }];
     case "spin":
-      return [{ text: "COUNT THE SPINNING ONES" }];
+      return [
+        { text: "COUNT THE " },
+        { text: "SPINNING", emph: true },
+        { text: " ONES" },
+      ];
     case "hugeColor":
       return [
-        { text: "COUNT THE HUGE " },
-        { text: c.name, color: c.css },
+        { text: "COUNT THE " },
+        { text: "HUGE", emph: true },
+        { text: " " },
+        { text: c.name, color: c.css, emph: true },
         { text: " ONES" },
       ];
     case "glyphColor":
       return [
         { text: "COUNT THE " },
-        { text: c.name, color: c.css },
-        { text: ` ${SHAPE_NAMES[g]}` },
+        { text: c.name, color: c.css, emph: true },
+        { text: " " },
+        { text: SHAPE_NAMES[g], emph: true },
       ];
     case "hugeGlyph":
       return meta.family === "numbers"
-        ? [{ text: `COUNT THE HUGE ${g}s` }]
-        : [{ text: `COUNT THE HUGE ${SHAPE_NAMES[g]}` }];
+        ? [
+            { text: "COUNT THE " },
+            { text: "HUGE", emph: true },
+            { text: " " },
+            { text: g, chip: true },
+          ]
+        : [
+            { text: "COUNT THE " },
+            { text: "HUGE", emph: true },
+            { text: " " },
+            { text: SHAPE_NAMES[g], emph: true },
+          ];
   }
 }
 
@@ -297,7 +336,9 @@ function generateRound(rng: Rng, i: number): CountRound {
       ...look,
       x: Math.min(94, Math.max(6, ((col + 0.5 + (rng() - 0.5) * 0.55) / cols) * 100)),
       y: Math.min(92, Math.max(8, ((row + 0.5 + (rng() - 0.5) * 0.55) / rows) * 100)),
-      wobble: 0.9 + rng() * 0.2,
+      // Small on purpose — big enough to feel organic, not big enough to
+      // blur the huge/normal/tiny signal players actually rely on.
+      wobble: 0.96 + rng() * 0.08,
     };
   });
 
@@ -312,8 +353,8 @@ function generateRound(rng: Rng, i: number): CountRound {
   };
 }
 
-function generateRounds(rng: Rng): CountRound[] {
-  return Array.from({ length: ROUNDS }, (_, i) => generateRound(rng, i));
+function generateRounds(rng: Rng, total: number): CountRound[] {
+  return Array.from({ length: total }, (_, i) => generateRound(rng, i));
 }
 
 type Phase = "intro" | "scan" | "gap" | "result";
@@ -347,6 +388,7 @@ export function CountGame() {
   const resultsRef = useRef<boolean[]>([]);
   const elapsedRef = useRef(0);
   const modeRef = useRef<Mode>("daily");
+  const totalRef = useRef(ROUNDS);
   const lockedRef = useRef(false);
   const phaseRef = useRef<Phase>("intro");
   const gapTimeoutRef = useRef(0);
@@ -363,7 +405,10 @@ export function CountGame() {
     const score = resultsRef.current.filter(Boolean).length;
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display = `${score}/${ROUNDS} · ${time.toFixed(1)}s`;
+    const display =
+      modeRef.current === "daily"
+        ? `${score}/${ROUNDS} · ${time.toFixed(1)}s`
+        : `${score} answered · ${time.toFixed(1)}s`;
     const isBest = submitBest("count", modeRef.current, {
       score,
       tiebreak: time,
@@ -403,7 +448,7 @@ export function CountGame() {
       () => {
         if (livesRef.current <= 0) {
           finish(false);
-        } else if (roundRef.current + 1 >= ROUNDS) {
+        } else if (roundRef.current + 1 >= totalRef.current) {
           finish(true);
         } else {
           roundRef.current += 1;
@@ -438,7 +483,8 @@ export function CountGame() {
   }
 
   function startRun(m: Mode) {
-    const generated = generateRounds(rngFor("count", m));
+    totalRef.current = m === "daily" ? ROUNDS : SURVIVAL_CAP;
+    const generated = generateRounds(rngFor("count", m), totalRef.current);
     roundsRef.current = generated;
     setRounds(generated);
     resultsRef.current = [];
@@ -495,7 +541,9 @@ export function CountGame() {
         path="/count"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS}`}
+        scoreLine={
+          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} answered`
+        }
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
@@ -513,9 +561,12 @@ export function CountGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-3 py-4">
+      <GameTitle game="count" title="HEADCOUNT" />
+
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          QUESTION {round + 1}/{ROUNDS}
+          QUESTION {round + 1}
+          {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
       </div>
@@ -526,13 +577,31 @@ export function CountGame() {
       <div className="text-center">
         <p className="font-display text-lg leading-snug">
           {r?.parts.map((part, i) => (
-            <span key={i} style={{ color: part.color }}>
+            <span
+              key={i}
+              style={{ color: part.color }}
+              className={
+                part.chip
+                  ? // Fog, deliberately: no game piece is ever fog-colored, so
+                    // the chip can't imply "count only this color".
+                    "mx-1.5 inline-flex h-8 min-w-8 items-center justify-center rounded-lg border-2 border-fog bg-panel px-1.5 align-middle text-fog"
+                  : part.emph
+                    ? "underline decoration-fog decoration-2 underline-offset-4"
+                    : undefined
+              }
+            >
               {part.text}
             </span>
           ))}
         </p>
         {r?.kind === "spin" && (
           <p className="text-xs text-fog">(spinning = the tilted ones)</p>
+        )}
+        {r?.kind === "glyph" && (
+          <p className="text-xs text-fog">(any color · any size)</p>
+        )}
+        {r?.kind === "hugeGlyph" && (
+          <p className="text-xs text-fog">(any color)</p>
         )}
       </div>
 

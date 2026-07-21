@@ -21,7 +21,7 @@ export type GameId =
   | "illusion"
   | "blink";
 
-export type Mode = "daily" | "practice";
+export type Mode = "daily" | "survival";
 
 /** Today's date as YYYY-MM-DD in UTC. */
 export function todayUTC(): string {
@@ -42,13 +42,13 @@ export function dailyRng(game: GameId): Rng {
   return rngFromString(`overload:${game}:${todayUTC()}`);
 }
 
-/** Seeded RNG for practice mode — different every run. */
-export function practiceRng(game: GameId): Rng {
-  return rngFromString(`overload:${game}:practice:${Date.now()}:${Math.random()}`);
+/** Seeded RNG for survival mode — different every run. */
+export function survivalRng(game: GameId): Rng {
+  return rngFromString(`overload:${game}:survival:${Date.now()}:${Math.random()}`);
 }
 
 export function rngFor(game: GameId, mode: Mode): Rng {
-  return mode === "daily" ? dailyRng(game) : practiceRng(game);
+  return mode === "daily" ? dailyRng(game) : survivalRng(game);
 }
 
 /**

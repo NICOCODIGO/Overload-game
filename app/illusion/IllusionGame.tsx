@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { IntroScreen } from "@/components/IntroScreen";
 import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
+import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -18,8 +19,28 @@ import {
 
 const ROUNDS = 12;
 const LIVES = 3;
+const SURVIVAL_CAP = 99;
 
-type IllusionType = "muller" | "ebbinghaus" | "vh" | "ponzo" | "contrast";
+type IllusionType =
+  | "muller"
+  | "ebbinghaus"
+  | "vh"
+  | "ponzo"
+  | "contrast"
+  | "oppel"
+  | "delboeuf";
+
+/** Base size of the compared things, per illusion — shared by the stimulus
+    and the side-by-side proof so they can never drift apart. */
+const BASE: Record<IllusionType, number> = {
+  muller: 180,
+  ebbinghaus: 20,
+  vh: 105,
+  ponzo: 85,
+  contrast: 150,
+  oppel: 95,
+  delboeuf: 20,
+};
 
 /** truth: 0 = first option (top/left/vertical), 1 = same, 2 = second option. */
 interface IllusionRound {
@@ -38,24 +59,40 @@ const QUESTIONS: Record<IllusionType, { q: string; labels: [string, string, stri
   vh: { q: "WHICH LINE IS ACTUALLY LONGER?", labels: ["VERTICAL", "SAME", "HORIZONTAL"] },
   ponzo: { q: "WHICH BAR IS ACTUALLY LONGER?", labels: ["TOP", "SAME", "BOTTOM"] },
   contrast: { q: "WHICH INNER SQUARE IS ACTUALLY LIGHTER?", labels: ["LEFT", "SAME", "RIGHT"] },
+  oppel: { q: "WHICH SEGMENT IS ACTUALLY LONGER?", labels: ["LEFT", "SAME", "RIGHT"] },
+  delboeuf: { q: "WHICH CENTER CIRCLE IS ACTUALLY BIGGER?", labels: ["LEFT", "SAME", "RIGHT"] },
 };
 
 /** The real difference shrinks toward the illusion's strength — late rounds
     sit right where your eyes stop being trustworthy. */
+const ALL_TYPES: IllusionType[] = [
+  "muller", "ebbinghaus", "oppel", "vh", "ponzo", "delboeuf", "contrast",
+];
+
 function roundPlan(i: number): { type: IllusionType; duration: number; deltaBase: number; deltaSpread: number } {
   const types: IllusionType[] = [
-    "muller", "ebbinghaus", "vh", "ponzo", "contrast",
-    "muller", "ebbinghaus", "ponzo", "contrast",
-    "muller", "ebbinghaus", "vh",
+    "muller", "ebbinghaus", "oppel", "vh", "ponzo", "delboeuf",
+    "contrast", "muller", "oppel",
+    "delboeuf", "ponzo", "contrast",
   ];
-  const durations = [8, 8, 7.5, 7.5, 7, 6.5, 6.5, 6.5, 6, 6, 5.5, 5.5];
-  const deltaBase = i < 5 ? 0.11 : i < 9 ? 0.06 : 0.035;
-  const deltaSpread = i < 5 ? 0.04 : i < 9 ? 0.03 : 0.015;
-  return { type: types[i], duration: durations[i], deltaBase, deltaSpread };
+  if (i < types.length) {
+    const durations = [8, 8, 7.5, 7.5, 7, 6.5, 6.5, 6.5, 6, 6, 5.5, 5.5];
+    const deltaBase = i < 5 ? 0.11 : i < 9 ? 0.06 : 0.035;
+    const deltaSpread = i < 5 ? 0.04 : i < 9 ? 0.03 : 0.015;
+    return { type: types[i], duration: durations[i], deltaBase, deltaSpread };
+  }
+  // Survival past the daily's 12: every illusion type in rotation, always at
+  // the hardest (near-threshold) delta, decision time shrinking to a floor.
+  return {
+    type: ALL_TYPES[i % ALL_TYPES.length],
+    duration: Math.max(4, 5.5 - (i - types.length) * 0.1),
+    deltaBase: 0.03,
+    deltaSpread: 0.012,
+  };
 }
 
-function generateRounds(rng: Rng): IllusionRound[] {
-  return Array.from({ length: ROUNDS }, (_, i) => {
+function generateRounds(rng: Rng, total: number): IllusionRound[] {
+  return Array.from({ length: total }, (_, i) => {
     const plan = roundPlan(i);
     return {
       type: plan.type,
@@ -79,7 +116,7 @@ function pair(base: number, truth: 0 | 1 | 2, delta: number): [number, number] {
 // ---------------------------------------------------------------- stimuli
 
 function MullerLyer({ r }: { r: IllusionRound }) {
-  const [lenTop, lenBot] = pair(180, r.truth, r.delta);
+  const [lenTop, lenBot] = pair(BASE.muller, r.truth, r.delta);
   const fins = (cx: number, y: number, len: number, out: boolean) => {
     const x1 = cx - len / 2;
     const x2 = cx + len / 2;
@@ -103,7 +140,7 @@ function MullerLyer({ r }: { r: IllusionRound }) {
 }
 
 function Ebbinghaus({ r }: { r: IllusionRound }) {
-  const [rL, rR] = pair(20, r.truth, r.delta);
+  const [rL, rR] = pair(BASE.ebbinghaus, r.truth, r.delta);
   const ring = (cx: number, cy: number, n: number, dist: number, radius: number) =>
     Array.from({ length: n }, (_, i) => {
       const a = (i / n) * Math.PI * 2;
@@ -130,7 +167,7 @@ function Ebbinghaus({ r }: { r: IllusionRound }) {
 }
 
 function VerticalHorizontal({ r }: { r: IllusionRound }) {
-  const [lenV, lenH] = pair(105, r.truth, r.delta);
+  const [lenV, lenH] = pair(BASE.vh, r.truth, r.delta);
   return (
     <svg viewBox="0 0 320 180" className="w-full">
       <g stroke="var(--color-paper)" strokeWidth="4" strokeLinecap="round">
@@ -142,7 +179,7 @@ function VerticalHorizontal({ r }: { r: IllusionRound }) {
 }
 
 function Ponzo({ r }: { r: IllusionRound }) {
-  const [lenTop, lenBot] = pair(85, r.truth, r.delta);
+  const [lenTop, lenBot] = pair(BASE.ponzo, r.truth, r.delta);
   return (
     <svg viewBox="0 0 320 180" className="w-full">
       <g stroke="var(--color-line)" strokeWidth="3">
@@ -158,7 +195,7 @@ function Ponzo({ r }: { r: IllusionRound }) {
 }
 
 function Contrast({ r }: { r: IllusionRound }) {
-  const [vL, vR] = pair(150, r.truth, r.delta).map(Math.round) as [number, number];
+  const [vL, vR] = pair(BASE.contrast, r.truth, r.delta).map(Math.round) as [number, number];
   const darkLeft = r.flip;
   return (
     <svg viewBox="0 0 320 180" className="w-full">
@@ -166,6 +203,52 @@ function Contrast({ r }: { r: IllusionRound }) {
       <rect x="160" y="0" width="160" height="180" fill={darkLeft ? "#9086c9" : "#0d0a22"} />
       <rect x="57" y="67" width="46" height="46" rx="4" fill={`rgb(${vL},${vL},${vL})`} />
       <rect x="217" y="67" width="46" height="46" rx="4" fill={`rgb(${vR},${vR},${vR})`} />
+    </svg>
+  );
+}
+
+function OppelKundt({ r }: { r: IllusionRound }) {
+  const [lenA, lenB] = pair(BASE.oppel, r.truth, r.delta);
+  const y = 90;
+  const xA = 160 - lenA;
+  const xB = 160 + lenB;
+  const tick = (x: number, tall: boolean) => (
+    <line
+      key={`t${x}`}
+      x1={x}
+      y1={y - (tall ? 17 : 10)}
+      x2={x}
+      y2={y + (tall ? 17 : 10)}
+      stroke="var(--color-paper)"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+    />
+  );
+  // The filled (ticked) span looks longer than the empty one — classic.
+  const innerTicks = (from: number, to: number) =>
+    Array.from({ length: 6 }, (_, i) =>
+      tick(from + ((i + 1) * (to - from)) / 7, false)
+    );
+  return (
+    <svg viewBox="0 0 320 180" className="w-full">
+      {tick(xA, true)}
+      {tick(160, true)}
+      {tick(xB, true)}
+      {r.flip ? innerTicks(xA, 160) : innerTicks(160, xB)}
+    </svg>
+  );
+}
+
+function Delboeuf({ r }: { r: IllusionRound }) {
+  const [rL, rR] = pair(BASE.delboeuf, r.truth, r.delta);
+  // One circle sits in a snug ring (looks bigger), one in a roomy ring.
+  const snugLeft = r.flip;
+  return (
+    <svg viewBox="0 0 320 180" className="w-full">
+      <circle cx="85" cy="90" r={snugLeft ? 27 : 52} fill="none" stroke="var(--color-line)" strokeWidth="3" />
+      <circle cx="235" cy="90" r={snugLeft ? 52 : 27} fill="none" stroke="var(--color-line)" strokeWidth="3" />
+      <circle cx="85" cy="90" r={rL} fill="var(--color-mint)" />
+      <circle cx="235" cy="90" r={rR} fill="var(--color-mint)" />
     </svg>
   );
 }
@@ -182,7 +265,79 @@ function Stimulus({ r }: { r: IllusionRound }) {
       return <Ponzo r={r} />;
     case "contrast":
       return <Contrast r={r} />;
+    case "oppel":
+      return <OppelKundt r={r} />;
+    case "delboeuf":
+      return <Delboeuf r={r} />;
   }
+}
+
+/**
+ * The receipts. After a wrong answer the two compared things are redrawn
+ * side by side with the illusion context stripped away — aligned bars,
+ * grounded circles, swatches on one shared background — so the player can
+ * SEE the truth instead of taking the game's word for it.
+ */
+function ProofView({ r }: { r: IllusionRound }) {
+  const { labels } = QUESTIONS[r.type];
+  const label = (x: number, text: string) => (
+    <text
+      x={x}
+      y="93"
+      textAnchor="middle"
+      fontSize="10"
+      fontWeight="700"
+      fill="var(--color-fog)"
+    >
+      {text}
+    </text>
+  );
+
+  if (r.type === "contrast") {
+    const [vL, vR] = pair(BASE.contrast, r.truth, r.delta).map(Math.round) as [number, number];
+    return (
+      <svg viewBox="0 0 320 100" className="w-full">
+        <rect x="88" y="8" width="144" height="70" rx="6" fill="#494066" />
+        <rect x="112" y="21" width="44" height="44" rx="4" fill={`rgb(${vL},${vL},${vL})`} />
+        <rect x="164" y="21" width="44" height="44" rx="4" fill={`rgb(${vR},${vR},${vR})`} />
+        {label(134, labels[0])}
+        {label(186, labels[2])}
+      </svg>
+    );
+  }
+
+  if (r.type === "ebbinghaus" || r.type === "delboeuf") {
+    const [ra, rb] = pair(BASE[r.type], r.truth, r.delta);
+    const baseY = 72;
+    return (
+      <svg viewBox="0 0 320 100" className="w-full">
+        <line x1="95" y1={baseY} x2="225" y2={baseY} stroke="var(--color-line)" strokeWidth="2" strokeDasharray="4 3" />
+        <circle cx="137" cy={baseY - ra} r={ra} fill="var(--color-mint)" />
+        <circle cx="183" cy={baseY - rb} r={rb} fill="var(--color-mint)" />
+        {label(137, labels[0])}
+        {label(183, labels[2])}
+      </svg>
+    );
+  }
+
+  // Length illusions: both bars flat, left edges aligned, gap line marked.
+  const [lenA, lenB] = pair(BASE[r.type], r.truth, r.delta);
+  const scale = 210 / Math.max(lenA, lenB);
+  const x0 = 78;
+  const endX = x0 + Math.max(lenA, lenB) * scale;
+  return (
+    <svg viewBox="0 0 320 100" className="w-full">
+      <rect x={x0} y="22" width={lenA * scale} height="11" rx="4" fill="var(--color-lemon)" />
+      <rect x={x0} y="50" width={lenB * scale} height="11" rx="4" fill="var(--color-lemon)" />
+      <line x1={endX} y1="12" x2={endX} y2="72" stroke="var(--color-coral)" strokeWidth="2" strokeDasharray="4 3" />
+      <text x={x0 - 8} y="31" textAnchor="end" fontSize="10" fontWeight="700" fill="var(--color-fog)">
+        {labels[0]}
+      </text>
+      <text x={x0 - 8} y="59" textAnchor="end" fontSize="10" fontWeight="700" fill="var(--color-fog)">
+        {labels[2]}
+      </text>
+    </svg>
+  );
 }
 
 // ------------------------------------------------------------------- game
@@ -216,6 +371,7 @@ export function IllusionGame() {
   const livesRef = useRef(LIVES);
   const resultsRef = useRef<boolean[]>([]);
   const modeRef = useRef<Mode>("daily");
+  const totalRef = useRef(ROUNDS);
   const lockedRef = useRef(false);
   const phaseRef = useRef<Phase>("intro");
   const gapTimeoutRef = useRef(0);
@@ -231,7 +387,8 @@ export function IllusionGame() {
     window.clearTimeout(gapTimeoutRef.current);
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display = `${score}/${ROUNDS}`;
+    const display =
+      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} calls`;
     const isBest = submitBest("illusion", modeRef.current, { score, display });
     if (modeRef.current === "daily") {
       setDailyResult("illusion", dailyNumber(), {
@@ -264,7 +421,7 @@ export function IllusionGame() {
       () => {
         if (livesRef.current <= 0) {
           finish(false);
-        } else if (roundRef.current + 1 >= ROUNDS) {
+        } else if (roundRef.current + 1 >= totalRef.current) {
           finish(true);
         } else {
           roundRef.current += 1;
@@ -274,7 +431,8 @@ export function IllusionGame() {
           beginRound();
         }
       },
-      correct ? 700 : 1200
+      // Wrong answers linger: the side-by-side proof needs reading time.
+      correct ? 700 : 2600
     );
   }
 
@@ -307,7 +465,8 @@ export function IllusionGame() {
   }
 
   function startRun(m: Mode) {
-    const generated = generateRounds(rngFor("illusion", m));
+    totalRef.current = m === "daily" ? ROUNDS : SURVIVAL_CAP;
+    const generated = generateRounds(rngFor("illusion", m), totalRef.current);
     roundsRef.current = generated;
     setRounds(generated);
     resultsRef.current = [];
@@ -362,7 +521,9 @@ export function IllusionGame() {
         path="/illusion"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`${summary.score}/${ROUNDS}`}
+        scoreLine={
+          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} calls`
+        }
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
@@ -378,9 +539,12 @@ export function IllusionGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 py-4">
+      <GameTitle game="illusion" title="DOUBLE TAKE" />
+
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          ILLUSION {round + 1}/{ROUNDS}
+          ILLUSION {round + 1}
+          {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
       </div>
@@ -395,16 +559,21 @@ export function IllusionGame() {
       <div className="relative overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk">
         {r && <Stimulus r={r} />}
 
-        {phase === "gap" && gap && (
+        {phase === "gap" && gap && gap.ok && (
           <div className="absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 justify-center">
-            <p
-              className={`animate-pop rounded-xl border-2 px-4 py-2 font-display text-lg backdrop-blur ${
-                gap.ok
-                  ? "border-mint bg-ink/80 text-mint"
-                  : "border-coral bg-ink/80 text-coral"
-              }`}
-            >
+            <p className="animate-pop rounded-xl border-2 border-mint bg-ink/80 px-4 py-2 font-display text-lg text-mint backdrop-blur">
               {gap.msg}
+            </p>
+          </div>
+        )}
+
+        {/* Wrong answer → show the receipts */}
+        {phase === "gap" && gap && !gap.ok && r && (
+          <div className="animate-pop absolute inset-0 z-20 flex flex-col items-center justify-center gap-1 bg-ink/90 px-4 backdrop-blur">
+            <p className="font-display text-lg text-coral">{gap.msg}</p>
+            <ProofView r={r} />
+            <p className="text-[10px] tracking-wide text-fog">
+              same shapes, side by side — no tricks
             </p>
           </div>
         )}

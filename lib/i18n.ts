@@ -19,13 +19,18 @@ interface Dict {
   daily: string;
   doneBadge: string;
   noBestYet: string;
-  practice: string;
-  practiceSub: string;
+  survival: string;
+  survivalSub: string;
   doneToday: string;
   playAgainQ: string;
   dailyBest: string;
-  practiceBest: string;
+  survivalBest: string;
   streak: (n: number) => string;
+  /** Short tile labels + value for the intro-screen stat row. */
+  statDaily: string;
+  statSurvival: string;
+  statStreak: string;
+  streakDays: (n: number) => string;
   streakAlive: (n: number) => string;
   runComplete: string;
   gameOver: string;
@@ -48,13 +53,17 @@ const EN: Dict = {
   daily: "DAILY",
   doneBadge: "✓ DAILY",
   noBestYet: "no best yet — play!",
-  practice: "PRACTICE",
-  practiceSub: "random seed, no streak",
+  survival: "SURVIVAL",
+  survivalSub: "endless — how long can you last?",
   doneToday: "done today:",
   playAgainQ: "play again?",
   dailyBest: "Daily best:",
-  practiceBest: "Practice best:",
+  survivalBest: "Survival best:",
   streak: (n) => `${n}-day streak`,
+  statDaily: "DAILY BEST",
+  statSurvival: "SURVIVAL BEST",
+  statStreak: "STREAK",
+  streakDays: (n) => `${n} day${n === 1 ? "" : "s"}`,
   streakAlive: (n) => `${n}-day streak — keep it alive`,
   runComplete: "RUN COMPLETE",
   gameOver: "GAME OVER",
@@ -88,13 +97,17 @@ const ES: Dict = {
   daily: "DIARIO",
   doneBadge: "✓ DIARIO",
   noBestYet: "sin récord aún — ¡juega!",
-  practice: "PRÁCTICA",
-  practiceSub: "semilla aleatoria, sin racha",
+  survival: "SUPERVIVENCIA",
+  survivalSub: "sin fin — ¿cuánto aguantas?",
   doneToday: "hecho hoy:",
   playAgainQ: "¿repetir?",
   dailyBest: "Mejor diario:",
-  practiceBest: "Mejor práctica:",
+  survivalBest: "Mejor supervivencia:",
   streak: (n) => `racha de ${n} días`,
+  statDaily: "MEJOR DIARIO",
+  statSurvival: "MEJOR SUPERV.",
+  statStreak: "RACHA",
+  streakDays: (n) => `${n} día${n === 1 ? "" : "s"}`,
   streakAlive: (n) => `racha de ${n} días — no la pierdas`,
   runComplete: "RONDA COMPLETA",
   gameOver: "FIN DEL JUEGO",

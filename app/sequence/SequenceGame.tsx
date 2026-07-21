@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { IntroScreen } from "@/components/IntroScreen";
 import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
+import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -323,6 +324,8 @@ export function SequenceGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 py-4">
+      <GameTitle game="sequence" title="SIGNAL RUSH" />
+
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
           TRANSMISSION {level}

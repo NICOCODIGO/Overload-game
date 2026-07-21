@@ -2,7 +2,8 @@
 
 Nine fast, stressful mini-games that test reflexes, focus, and patience.
 Every game has a **daily challenge** — seeded from the UTC date, so every
-player worldwide gets the identical run — plus an endless practice mode.
+player worldwide gets the identical run — plus an endless **survival mode**
+(how long can you last?), scored by rounds survived.
 
 | Route | Game | The stress |
 | --- | --- | --- |
