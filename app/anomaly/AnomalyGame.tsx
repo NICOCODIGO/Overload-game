@@ -250,7 +250,9 @@ export function AnomalyGame() {
           beginRound();
         }
       },
-      reveal ? 1200 : 700
+      // A reveal is only worth showing if there's time to actually spot the
+      // ring in a field of 200 glyphs.
+      reveal ? 1600 : 700
     );
   }
 
@@ -258,9 +260,7 @@ export function AnomalyGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.reveal();
     setPhase("scan");
-    timer.start(r.duration, () =>
-      endRound(false, "FEED LOST — IT WAS RINGED", true)
-    );
+    timer.start(r.duration, () => endRound(false, "FAILED ✗", true));
   }
 
   function handleTap(cell: Cell) {
@@ -336,9 +336,16 @@ export function AnomalyGame() {
   }
 
   const r = rounds[round];
+  // Park the banner in whichever half of the field the anomaly isn't in.
+  const targetY = r?.cells.find((c) => c.isTarget)?.y ?? 50;
+  const bannerSpot = !gap?.reveal
+    ? "top-1/2 -translate-y-1/2"
+    : targetY > 50
+      ? "top-3"
+      : "bottom-3";
 
   return (
-    <div className="flex flex-1 flex-col gap-3 py-4">
+    <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
       <GameTitle game="anomaly" title="ANOMALY" />
 
       <div className="flex items-center justify-between">
@@ -367,7 +374,7 @@ export function AnomalyGame() {
       {/* The field */}
       <div
         key={shakeKey}
-        className={`${shakeKey > 0 ? "animate-shake" : ""} touch-surface relative mx-auto w-full max-w-sm overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk`}
+        className={`${shakeKey > 0 ? "animate-shake" : ""} touch-surface relative mx-auto max-h-[48dvh] w-full max-w-sm overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk sm:max-h-none`}
         style={{ aspectRatio: "4 / 5", containerType: "inline-size" }}
       >
         {r?.cells.map((cell, i) => (
@@ -399,9 +406,13 @@ export function AnomalyGame() {
           </button>
         ))}
 
-        {/* Between-round overlay */}
+        {/* Between-round overlay. On a reveal it gets out of the way of the
+            ring — there's no point pointing at the anomaly and then standing
+            in front of it. */}
         {phase === "gap" && gap && (
-          <div className="absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 justify-center">
+          <div
+            className={`absolute inset-x-0 z-20 flex justify-center ${bannerSpot}`}
+          >
             <p
               className={`animate-pop rounded-xl border-2 px-4 py-2 font-display text-lg backdrop-blur ${
                 gap.ok

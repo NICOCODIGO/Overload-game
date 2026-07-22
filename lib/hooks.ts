@@ -47,3 +47,35 @@ export function useMuted(): boolean {
     () => false
   );
 }
+
+/**
+ * While `active`, hold the document to the strip of screen the on-screen
+ * keyboard leaves visible.
+ *
+ * Focusing an input on a phone doesn't shrink the page — it just covers the
+ * bottom of it — so the browser scrolls the whole document up to put the
+ * caret in view, taking the game's title and timer off the top with it. We
+ * measure the visible strip with the VisualViewport API, hand it to CSS, and
+ * undo the browser's scroll; `body.kb-fit` does the rest.
+ */
+export function useKeyboardFit(active: boolean): void {
+  useEffect(() => {
+    if (!active) return;
+    const vv = window.visualViewport;
+    const root = document.documentElement;
+    const sync = () => {
+      if (vv) root.style.setProperty("--vv-height", `${vv.height}px`);
+      window.scrollTo(0, 0);
+    };
+    document.body.classList.add("kb-fit");
+    sync();
+    vv?.addEventListener("resize", sync);
+    vv?.addEventListener("scroll", sync);
+    return () => {
+      document.body.classList.remove("kb-fit");
+      root.style.removeProperty("--vv-height");
+      vv?.removeEventListener("resize", sync);
+      vv?.removeEventListener("scroll", sync);
+    };
+  }, [active]);
+}

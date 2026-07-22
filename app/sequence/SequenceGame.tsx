@@ -321,7 +321,7 @@ export function SequenceGame() {
   const hidden = phase === "input" && level >= MEMORY_FROM;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 py-4">
+    <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
       <GameTitle game="sequence" title="SIGNAL RUSH" />
 
       <div className="flex items-center justify-between">
@@ -337,7 +337,7 @@ export function SequenceGame() {
       {/* Signal display */}
       <div
         key={shakeKey}
-        className={`${shakeKey > 0 ? "animate-shake" : ""} touch-surface relative flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-line bg-panel p-6 shadow-chunk`}
+        className={`${shakeKey > 0 ? "animate-shake" : ""} touch-surface relative flex min-h-36 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-line bg-panel p-4 shadow-chunk sm:min-h-44 sm:p-6`}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -396,8 +396,9 @@ export function SequenceGame() {
         )}
       </div>
 
-      {/* On-screen d-pad */}
-      <div className="mx-auto grid w-44 grid-cols-3 gap-1">
+      {/* On-screen d-pad — roomy on phones (where it's the only control) and
+          tightened back up at sm+, where the keyboard does the real work. */}
+      <div className="mx-auto grid w-60 grid-cols-3 gap-3 sm:w-48 sm:gap-2">
         <span />
         <DPadButton dir="up" onDir={handleDir} />
         <span />
@@ -423,7 +424,7 @@ function DPadButton({ dir, onDir }: { dir: Dir; onDir: (d: Dir) => void }) {
         e.preventDefault();
         onDir(dir);
       }}
-      className="flex h-14 items-center justify-center rounded-lg border-2 border-line bg-panel2 font-display text-xl text-paper shadow-chunk-sm transition-transform active:translate-y-0.5 active:shadow-none"
+      className="flex h-16 items-center justify-center rounded-lg border-2 border-line bg-panel2 font-display text-xl text-paper shadow-chunk-sm transition-transform active:translate-y-0.5 active:shadow-none sm:h-14"
     >
       <Arrow dir={dir} />
     </button>

@@ -13,7 +13,7 @@ const GAMES: { game: GameId; href: string; title: string; accent: string }[] = [
   { game: "anomaly", href: "/anomaly", title: "ANOMALY", accent: "text-coral" },
   { game: "count", href: "/count", title: "HEADCOUNT", accent: "text-mint" },
   { game: "pattern", href: "/pattern", title: "NEXT!", accent: "text-sky" },
-  { game: "illusion", href: "/illusion", title: "DOUBLE TAKE", accent: "text-lemon" },
+  { game: "scramble", href: "/scramble", title: "SCRAMBLE", accent: "text-lemon" },
   { game: "blink", href: "/blink", title: "BLINK", accent: "text-coral" },
 ];
 

@@ -18,7 +18,7 @@ export type GameId =
   | "anomaly"
   | "count"
   | "pattern"
-  | "illusion"
+  | "scramble"
   | "blink";
 
 export type Mode = "daily" | "survival";

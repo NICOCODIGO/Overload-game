@@ -45,6 +45,10 @@ export const viewport: Viewport = {
   // Games are tap-heavy; pinch zoom off avoids accidental zooming mid-round.
   maximumScale: 1,
   userScalable: false,
+  // The on-screen keyboard shrinks the layout instead of sliding over it, so
+  // Panic Type's title and timer stay put while you type. (Chrome/Android;
+  // browsers without it fall back to the measuring in useKeyboardFit.)
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -60,9 +64,11 @@ export default function RootLayout({
       {/* min-h-screen (absolute 100vh) so the flex column always fills the
           viewport — the footer's mt-auto needs real free space to push into.
           min-h-full depended on an html height chain that wasn't resolving. */}
-      <body className="min-h-screen flex flex-col">
+      {/* dvh (not vh) so mobile browser chrome is accounted for — the games
+          are meant to fit the phone screen without scrolling. */}
+      <body className="min-h-dvh flex flex-col">
         <Header />
-        <main className="flex-1 flex flex-col w-full max-w-3xl mx-auto px-4 pb-10">
+        <main className="flex-1 flex flex-col w-full max-w-3xl mx-auto px-4 pb-4 sm:pb-10">
           {children}
         </main>
       </body>
