@@ -2,10 +2,7 @@
 
 import type { GameId } from "@/lib/daily";
 import { GameCard } from "./GameCard";
-import { PixelIcon } from "./PixelIcon";
 import { SocialLinks } from "./SocialLinks";
-import { getStreak } from "@/lib/storage";
-import { useClientValue } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 
 const GAMES: { game: GameId; href: string; title: string; accent: string }[] = [
@@ -21,11 +18,13 @@ const GAMES: { game: GameId; href: string; title: string; accent: string }[] = [
 ];
 
 export function ArcadeGrid() {
-  const streak = useClientValue(getStreak, 0);
   const t = useT();
 
   return (
-    <div className="animate-rise flex flex-1 flex-col justify-center gap-8 py-10">
+    // Content flows from the top; the footer is pushed to the bottom with
+    // mt-auto. On short viewports the page just scrolls — nothing centers
+    // into dead space or clips.
+    <div className="animate-rise flex flex-1 flex-col gap-8 py-10">
       <div className="text-center">
         <h1 className="font-display text-5xl leading-tight text-lemon drop-shadow-[4px_4px_0_var(--color-coral)] sm:text-6xl">
           OVER
@@ -33,13 +32,7 @@ export function ArcadeGrid() {
             LOAD
           </span>
         </h1>
-        <p className="mt-3 text-fog">{t.tagline}</p>
-        {streak > 0 && (
-          <p className="mt-1 flex items-center justify-center gap-1.5 font-display text-sm text-coral">
-            <PixelIcon name="flame" size={16} />
-            {t.streakAlive(streak)}
-          </p>
-        )}
+        <p className="mt-3 font-pixel text-xl text-fog">{t.tagline}</p>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-3">
@@ -48,8 +41,10 @@ export function ArcadeGrid() {
         ))}
       </div>
 
-      <footer className="mt-2 flex flex-col items-center gap-4 border-t-2 border-line pt-8 pb-4">
-        <p className="text-center text-xs text-fog">{t.footerNote}</p>
+      <footer className="mt-auto flex flex-col items-center gap-4 border-t-2 border-line pt-8">
+        <p className="text-center font-pixel text-base text-fog">
+          {t.footerNote}
+        </p>
         <SocialLinks />
       </footer>
     </div>

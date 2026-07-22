@@ -405,10 +405,9 @@ export function CountGame() {
     const score = resultsRef.current.filter(Boolean).length;
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
+    // Time still breaks ties internally, but the shown score stays clean.
     const display =
-      modeRef.current === "daily"
-        ? `${score}/${ROUNDS} · ${time.toFixed(1)}s`
-        : `${score} answered · ${time.toFixed(1)}s`;
+      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} answered`;
     const isBest = submitBest("count", modeRef.current, {
       score,
       tiebreak: time,
@@ -549,9 +548,6 @@ export function CountGame() {
         newBest={newBest}
         bestDisplay={getBest("count", mode)?.display ?? null}
         streak={streak}
-        extraStats={[
-          { label: "Count time", value: `${summary.time.toFixed(1)}s` },
-        ]}
         onPlayAgain={() => startRun(mode)}
       />
     );

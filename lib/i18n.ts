@@ -47,7 +47,7 @@ interface Dict {
 }
 
 const EN: Dict = {
-  tagline: "Nine ways to fry your brain. New daily challenges at midnight UTC.",
+  tagline: "Nine ways to test your brain. New daily challenges at midnight UTC.",
   footerNote:
     "Personal bests and streaks live in your browser. No accounts, no tracking — just stress.",
   daily: "DAILY",

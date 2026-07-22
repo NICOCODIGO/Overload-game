@@ -198,10 +198,9 @@ export function AnomalyGame() {
     const score = resultsRef.current.filter(Boolean).length;
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
+    // Time still breaks ties internally, but the shown score stays clean.
     const display =
-      modeRef.current === "daily"
-        ? `${score}/${ROUNDS} · ${time.toFixed(1)}s`
-        : `${score} found · ${time.toFixed(1)}s`;
+      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} found`;
     const isBest = submitBest("anomaly", modeRef.current, {
       score,
       tiebreak: time,
@@ -331,9 +330,6 @@ export function AnomalyGame() {
         newBest={newBest}
         bestDisplay={getBest("anomaly", mode)?.display ?? null}
         streak={streak}
-        extraStats={[
-          { label: "Scan time", value: `${summary.time.toFixed(1)}s` },
-        ]}
         onPlayAgain={() => startRun(mode)}
       />
     );

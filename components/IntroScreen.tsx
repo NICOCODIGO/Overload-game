@@ -88,15 +88,17 @@ export function IntroScreen(props: IntroScreenProps) {
         <h1 className="mt-2 font-display text-4xl text-lemon drop-shadow-[3px_3px_0_var(--color-coral)]">
           {props.title}
         </h1>
-        <p className="mt-2 text-fog">{props.tagline}</p>
+        <p className="mt-2 font-pixel text-xl text-fog">{props.tagline}</p>
       </div>
 
       {/* How to play, as one short paragraph — with your record underneath,
           so the card reads as "here's the game, here's how you've done". */}
       <div className="w-full max-w-sm space-y-3 rounded-xl border-2 border-line bg-panel p-5 shadow-chunk">
-        <p className="text-sm leading-relaxed">{props.howTo.join(" ")}</p>
+        <p className="font-pixel text-xl leading-snug">
+          {props.howTo.join(" ")}
+        </p>
         {props.controlsHint && (
-          <p className="text-xs text-fog">{props.controlsHint}</p>
+          <p className="font-pixel text-base text-fog">{props.controlsHint}</p>
         )}
 
         {stats.length > 0 && (

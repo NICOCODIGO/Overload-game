@@ -52,17 +52,21 @@ export function GameCard(props: GameCardProps) {
       <span className={`font-display text-xl ${props.accent}`}>
         {props.title}
       </span>
-      <span className="text-sm text-fog">{props.hook}</span>
-      <span className="mt-1 flex items-center gap-1.5 text-xs text-fog">
-        {best ? (
-          <>
-            <PixelIcon name="trophy" size={14} />
-            {best.display}
-          </>
-        ) : (
-          t.noBestYet
-        )}
+      <span className="font-pixel text-lg leading-tight text-fog">
+        {props.hook}
       </span>
+      {best ? (
+        <span className="mt-1 flex items-center gap-2 rounded-lg bg-panel2 px-3 py-1.5">
+          <PixelIcon name="trophy" size={18} />
+          <span className="font-display text-sm text-lemon">
+            {best.display}
+          </span>
+        </span>
+      ) : (
+        <span className="mt-1 font-pixel text-base text-fog/70">
+          {t.noBestYet}
+        </span>
+      )}
     </Link>
   );
 }

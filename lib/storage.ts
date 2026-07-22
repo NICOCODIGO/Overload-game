@@ -41,7 +41,11 @@ export interface BestScore {
 }
 
 export function getBest(game: GameId, mode: Mode): BestScore | null {
-  return get<BestScore | null>(`best:${game}:${mode}`, null);
+  const best = get<BestScore | null>(`best:${game}:${mode}`, null);
+  if (!best) return null;
+  // Strip any legacy tiebreak suffix ("Level 15 · 48.8s" → "Level 15") so
+  // bests stored before the metric was dropped still display cleanly.
+  return { ...best, display: best.display.split(" · ")[0] };
 }
 
 /** Records a result; returns true if it's a new personal best. */
