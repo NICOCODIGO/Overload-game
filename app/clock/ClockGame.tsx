@@ -372,7 +372,7 @@ export function ClockGame() {
   const hidden = phase === "answer" && (r?.flash ?? false);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 py-4">
+    <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
       <GameTitle game="clock" title="OVERCLOCKED" />
 
       <div className="flex items-center justify-between">
@@ -435,7 +435,7 @@ export function ClockGame() {
               disabled={phase !== "answer"}
               onPointerDown={() => phase === "answer" && handlePick(option)}
               className={`rounded-2xl border-2 border-line bg-panel2 font-display text-2xl text-paper shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-40 ${
-                r?.reverse ? "flex items-center justify-center p-2" : "h-16"
+                r?.reverse ? "flex items-center justify-center p-1 sm:p-2" : "h-14 sm:h-16"
               }`}
             >
               {r?.reverse ? (
@@ -521,8 +521,8 @@ function ClockFace({
       viewBox="0 0 200 200"
       className={
         mini
-          ? "h-40 w-40 max-w-full sm:h-52 sm:w-52"
-          : "h-64 w-64 max-w-full sm:h-72 sm:w-72"
+          ? "h-32 w-32 max-w-full sm:h-52 sm:w-52"
+          : "h-52 w-52 max-w-full sm:h-72 sm:w-72"
       }
       role="img"
       aria-label={hidden ? "hidden clock" : "analog clock"}

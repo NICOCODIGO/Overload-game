@@ -84,7 +84,7 @@ const EN: Dict = {
     anomaly: "One of them doesn't belong. Find it before the feed cuts.",
     count: "Count the chaos — but only the ones we ask for.",
     pattern: "2, 4, 8, 16… the pattern knows what comes next. Do you?",
-    illusion: "Your eyes are lying. Answer anyway.",
+    scramble: "Unscramble the word — but junk letters are hidden in the pile.",
     blink: "The scene flickers. One thing changed. Find it.",
   },
 };
@@ -128,7 +128,7 @@ const ES: Dict = {
     anomaly: "Uno no encaja. Encuéntralo antes de que se corte la señal.",
     count: "Cuenta el caos — pero solo lo que te pedimos.",
     pattern: "2, 4, 8, 16… el patrón sabe qué sigue. ¿Y tú?",
-    illusion: "Tus ojos te mienten. Responde igual.",
+    scramble: "Ordena la palabra — pero hay letras falsas en el montón.",
     blink: "La escena parpadea. Algo cambió. Encuéntralo.",
   },
 };

@@ -38,6 +38,10 @@ type Family = "numbers" | "shapes";
 
 const NUMBER_POOL = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
+// Rotate a 6 far enough and it's a 9 — so both wear a bar under the digit
+// that turns with them. Whichever end the bar is on is the bottom.
+const BARRED_DIGITS = new Set(["6", "9"]);
+
 const SHAPE_POOL = ["●", "■", "▲", "★", "◆"] as const;
 const SHAPE_NAMES: Record<string, string> = {
   "●": "CIRCLES",
@@ -523,8 +527,8 @@ export function CountGame() {
         title="HEADCOUNT"
         tagline="Count the chaos. Answer in one tap."
         howTo={[
-          "A mob of numbers and shapes appears — count only what the question asks for.",
-          "Answer with one tap on the keypad. A wrong count or a slow count costs a life.",
+          "A mob of numbers and shapes appears — count only what the question asks for, then tap the keypad.",
+          "6 and 9 wear a bar on the bottom, so a spinning one still reads right. A wrong or slow count costs a life.",
         ]}
         controlsHint="Tap the keypad · number keys on desktop"
         onStart={startRun}
@@ -554,9 +558,14 @@ export function CountGame() {
   }
 
   const r = rounds[round];
+  // Only spell the bar out on the rounds where mistaking a 6 for a 9 would
+  // actually cost you the answer.
+  const barHint = r?.parts.some((p) => p.chip && BARRED_DIGITS.has(p.text))
+    ? " · the bar marks the bottom"
+    : "";
 
   return (
-    <div className="flex flex-1 flex-col gap-3 py-4">
+    <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
       <GameTitle game="count" title="HEADCOUNT" />
 
       <div className="flex items-center justify-between">
@@ -586,7 +595,13 @@ export function CountGame() {
                     : undefined
               }
             >
-              {part.text}
+              {/* The target digit wears the same bar the field does, so 6 and
+                  9 read the same way in the question and in the mob. */}
+              {part.chip && BARRED_DIGITS.has(part.text) ? (
+                <span className="digit-bar">{part.text}</span>
+              ) : (
+                part.text
+              )}
             </span>
           ))}
         </p>
@@ -594,16 +609,18 @@ export function CountGame() {
           <p className="text-xs text-fog">(spinning = the tilted ones)</p>
         )}
         {r?.kind === "glyph" && (
-          <p className="text-xs text-fog">(any color · any size)</p>
+          <p className="text-xs text-fog">
+            (any color · any size{barHint})
+          </p>
         )}
         {r?.kind === "hugeGlyph" && (
-          <p className="text-xs text-fog">(any color)</p>
+          <p className="text-xs text-fog">(any color{barHint})</p>
         )}
       </div>
 
       {/* The mob */}
       <div
-        className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk"
+        className="relative mx-auto max-h-[42dvh] w-full max-w-md overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk sm:max-h-none"
         style={{ aspectRatio: "4 / 3", containerType: "inline-size" }}
       >
         {r?.items.map((item, i) => (
@@ -623,9 +640,9 @@ export function CountGame() {
             }}
           >
             <span
-              className={
-                item.spin ? "animate-count-spin inline-block" : "inline-block"
-              }
+              className={`inline-block ${
+                item.spin ? "animate-count-spin" : ""
+              } ${BARRED_DIGITS.has(item.glyph) ? "digit-bar" : ""}`}
             >
               {item.glyph}
             </span>

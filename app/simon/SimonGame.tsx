@@ -293,7 +293,7 @@ export function SimonGame() {
   const cmd = commands[round];
 
   return (
-    <div className="flex flex-1 flex-col gap-4 py-4">
+    <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
       <GameTitle game="simon" title="SIMON SAYS" />
 
       <div className="flex items-center justify-between">
@@ -307,7 +307,7 @@ export function SimonGame() {
       <TimerBar progress={phase === "show" ? timer.progress : 0} />
 
       {/* Command card */}
-      <div className="relative flex min-h-36 flex-col items-center justify-center rounded-2xl border-2 border-line bg-panel p-6 text-center shadow-chunk">
+      <div className="relative flex min-h-28 flex-col items-center justify-center rounded-2xl border-2 border-line bg-panel p-4 text-center shadow-chunk sm:min-h-36 sm:p-6">
         {phase === "feedback" && feedback ? (
           <p
             className={`animate-pop font-display text-2xl ${
@@ -340,7 +340,7 @@ export function SimonGame() {
             type="button"
             disabled={phase !== "show"}
             onPointerDown={() => phase === "show" && handleTap(i)}
-            className={`${BUTTON_BG[color]} h-28 rounded-2xl border-2 border-black/40 font-display text-2xl shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-60 ${
+            className={`${BUTTON_BG[color]} h-20 rounded-2xl border-2 border-black/40 font-display text-2xl shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-60 sm:h-28 ${
               color === "yellow" || color === "green"
                 ? "text-ink"
                 : "text-white"

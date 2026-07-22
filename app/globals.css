@@ -71,6 +71,26 @@ body {
   user-select: none;
 }
 
+/* Games with a text input pin the document to the strip the on-screen
+   keyboard leaves visible (height is measured in useKeyboardFit). Without
+   this the document stays taller than the screen, so the phone scrolls it to
+   reveal the caret and the game's title and timer slide off the top. */
+body.kb-fit {
+  position: fixed;
+  inset: 0;
+  height: var(--vv-height, 100dvh);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 6 and 9 are the same glyph upside down, so a spinning one is unanswerable.
+   A bar rides along under the digit: whichever end it's on is the bottom.
+   Handwriting has settled this argument the same way for a long time. */
+.digit-bar {
+  border-bottom: 0.12em solid currentColor;
+  padding-bottom: 0.08em;
+}
+
 /* ------------------------------------------------------------- animations */
 @keyframes shake {
   10%, 90% { transform: translateX(-2px); }
@@ -185,12 +205,36 @@ body {
 .group:hover .px-key2 { animation: px-flash 0.6s steps(1) infinite 0.2s; }
 .group:hover .px-key3 { animation: px-flash 0.6s steps(1) infinite 0.4s; }
 
-/* Clock hands sweep around the dial (origin = hand pivot in the sprite) */
-.group:hover .px-clock-hands {
+/* Clock hands sweep the dial like a real movement: the long minute hand laps
+   twelve times for every lap the short hour hand makes. Both pivot on the
+   sprite's center cell (7.5 / 16 = 46.9%). */
+.group:hover .px-hand-minute,
+.group:hover .px-hand-hour {
   transform-box: view-box;
   transform-origin: 46.9% 46.9%;
-  animation: px-spin360 1.5s linear infinite;
+  animation: px-spin360 linear infinite;
 }
+.group:hover .px-hand-minute { animation-duration: 1.2s; }
+.group:hover .px-hand-hour { animation-duration: 14.4s; }
+
+/* Scramble's tile face flips letter to letter. Layers 2+ sit hidden so the
+   idle tile is a plain "A"; on hover each layer owns a fifth of the cycle,
+   which reads as the letter being reshuffled. */
+.px-scram-2,
+.px-scram-3,
+.px-scram-4,
+.px-scram-5 {
+  opacity: 0;
+}
+@keyframes px-letter-swap {
+  0%, 19% { opacity: 1; }
+  20%, 100% { opacity: 0; }
+}
+.group:hover .px-scram-1 { animation: px-letter-swap 0.9s linear 0s infinite; }
+.group:hover .px-scram-2 { animation: px-letter-swap 0.9s linear -0.72s infinite; }
+.group:hover .px-scram-3 { animation: px-letter-swap 0.9s linear -0.54s infinite; }
+.group:hover .px-scram-4 { animation: px-letter-swap 0.9s linear -0.36s infinite; }
+.group:hover .px-scram-5 { animation: px-letter-swap 0.9s linear -0.18s infinite; }
 
 /* Lens shine catches the light */
 .group:hover .px-glint { animation: px-glint 1.3s linear infinite; }

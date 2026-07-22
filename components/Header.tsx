@@ -19,7 +19,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b-2 border-line bg-ink/90 backdrop-blur">
-      <div className="flex w-full items-center justify-between gap-4 px-5 py-4 sm:px-6">
+      <div className="flex w-full items-center justify-between gap-4 px-5 py-2.5 sm:px-6 sm:py-4">
         <Link
           href="/"
           className="font-display text-xl tracking-wide text-lemon drop-shadow-[2px_2px_0_var(--color-coral)] sm:text-2xl"

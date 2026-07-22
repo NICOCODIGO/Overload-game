@@ -22,7 +22,6 @@ interface GameCardProps {
 const HOVER_ANIM: Partial<Record<GameId, string>> = {
   simon: "sprite-hover-wag", // finger wags "no no"
   pattern: "sprite-hover-wiggle",
-  illusion: "sprite-hover-pulse",
   blink: "sprite-hover-blink",
 };
 

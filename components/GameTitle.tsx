@@ -26,9 +26,14 @@ export function GameTitle({
     );
   }
   return (
+    // Icon/title scale down on phones (base) and restore at sm+ (desktop).
     <div className="flex flex-col items-center text-center">
-      <PixelIcon name={game} size={56} className="mx-auto" />
-      <span className="mt-2 font-display text-4xl text-lemon drop-shadow-[3px_3px_0_var(--color-coral)]">
+      <PixelIcon
+        name={game}
+        size={56}
+        className="mx-auto h-9 w-9 sm:h-14 sm:w-14"
+      />
+      <span className="mt-1 font-display text-2xl text-lemon drop-shadow-[2px_2px_0_var(--color-coral)] sm:mt-2 sm:text-4xl sm:drop-shadow-[3px_3px_0_var(--color-coral)]">
         {title}
       </span>
     </div>

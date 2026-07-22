@@ -513,7 +513,7 @@ export function PatternGame() {
   const revealRule = phase === "gap" && gap !== null && !gap.ok;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 py-4">
+    <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
       <GameTitle game="pattern" title="NEXT!" />
 
       <div className="flex items-center justify-between">

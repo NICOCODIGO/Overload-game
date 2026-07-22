@@ -18,7 +18,7 @@ const SHARE_EMOJI: Record<GameId, string> = {
   anomaly: "🔎",
   count: "🔢",
   pattern: "🧩",
-  illusion: "👁️",
+  scramble: "🔤",
   blink: "👀",
 };
 
@@ -103,13 +103,13 @@ export function ResultScreen(props: ResultScreenProps) {
     ];
 
   return (
-    <div className="animate-rise flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
+    <div className="animate-rise flex flex-1 flex-col items-center justify-center gap-4 py-4 text-center sm:gap-6 sm:py-10">
       <GameTitle game={props.game} title={props.gameName.toUpperCase()} />
 
       <h2
-        className={`animate-pop font-display text-5xl leading-[0.95] sm:text-6xl ${
+        className={`animate-pop font-display text-4xl leading-[0.95] sm:text-6xl ${
           props.survived ? "text-mint" : "text-coral"
-        } drop-shadow-[5px_5px_0_rgb(0_0_0/0.55)]`}
+        } drop-shadow-[3px_3px_0_rgb(0_0_0/0.55)] sm:drop-shadow-[5px_5px_0_rgb(0_0_0/0.55)]`}
       >
         {props.survived ? t.runComplete : t.gameOver}
       </h2>
@@ -121,8 +121,8 @@ export function ResultScreen(props: ResultScreenProps) {
       )}
 
       {/* One results card: score, run strip, stats */}
-      <div className="w-full max-w-sm space-y-3 rounded-2xl border-2 border-line bg-panel px-6 py-5 shadow-chunk">
-        <div className="font-display text-4xl text-lemon">
+      <div className="w-full max-w-sm space-y-2.5 rounded-2xl border-2 border-line bg-panel px-6 py-4 shadow-chunk sm:space-y-3 sm:py-5">
+        <div className="font-display text-3xl text-lemon sm:text-4xl">
           {props.scoreLine}
         </div>
         <div>
@@ -142,11 +142,11 @@ export function ResultScreen(props: ResultScreenProps) {
           ))}
         </div>
         {stats.length > 0 && (
-          <div className="flex gap-2 border-t-2 border-line pt-3">
+          <div className="flex gap-2 border-t-2 border-line pt-2.5 sm:pt-3">
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="flex flex-1 flex-col items-center gap-1 rounded-lg bg-panel2 px-2 py-2.5"
+                className="flex flex-1 flex-col items-center gap-1 rounded-lg bg-panel2 px-2 py-2 sm:py-2.5"
               >
                 <PixelIcon name={s.icon} size={16} />
                 <span className={`font-display text-sm ${s.color}`}>
@@ -161,18 +161,18 @@ export function ResultScreen(props: ResultScreenProps) {
         )}
       </div>
 
-      <div className="flex w-full max-w-sm flex-col gap-3">
+      <div className="flex w-full max-w-sm flex-col gap-2.5 sm:gap-3">
         <button
           type="button"
           onClick={share}
-          className="rounded-xl border-2 border-black/40 bg-mint px-6 py-4 font-display text-ink shadow-chunk transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none"
+          className="rounded-xl border-2 border-black/40 bg-mint px-6 py-3 font-display text-ink shadow-chunk transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none sm:py-4"
         >
           {copied ? t.copied : t.share}
         </button>
         <button
           type="button"
           onClick={props.onPlayAgain}
-          className="rounded-xl border-2 border-line bg-panel px-6 py-3 font-display text-paper shadow-chunk-sm transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none"
+          className="rounded-xl border-2 border-line bg-panel px-6 py-2.5 font-display text-paper shadow-chunk-sm transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none sm:py-3"
         >
           {t.playAgain}
         </button>

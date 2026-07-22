@@ -349,7 +349,7 @@ export function BlinkGame() {
   const altered = phase === "scan" ? frame === "b" : true; // gap shows frame B
 
   return (
-    <div className="flex flex-1 flex-col gap-3 py-4">
+    <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
       <GameTitle game="blink" title="BLINK" />
 
       <div className="flex items-center justify-between">
@@ -365,7 +365,7 @@ export function BlinkGame() {
       {/* The flickering scene */}
       <div
         key={shakeKey}
-        className={`${shakeKey > 0 ? "animate-shake" : ""} touch-surface relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk`}
+        className={`${shakeKey > 0 ? "animate-shake" : ""} touch-surface relative mx-auto max-h-[50dvh] w-full max-w-md overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk sm:max-h-none`}
         style={{ aspectRatio: "4 / 3", containerType: "inline-size" }}
       >
         {!blank &&

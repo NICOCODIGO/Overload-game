@@ -7,6 +7,8 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { haptics } from "@/lib/haptics";
+import { useKeyboardFit } from "@/lib/hooks";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, shuffle, type Rng } from "@/lib/rng";
@@ -141,6 +143,7 @@ export function TypingGame() {
       livesRef.current -= 1;
       setLives(livesRef.current);
       sfx.error();
+      haptics.fail();
       if (livesRef.current <= 0) {
         finish(false);
       } else if (idx + 1 >= totalRef.current) {
@@ -169,6 +172,8 @@ export function TypingGame() {
       if (sawError) {
         setErrKey((k) => k + 1);
         sfx.error();
+        // The one cue that reaches a player watching their own thumbs.
+        haptics.error();
       } else {
         sfx.tap();
       }
@@ -210,6 +215,9 @@ export function TypingGame() {
   useEffect(() => {
     if (phase === "typing") inputRef.current?.focus();
   }, [phase, index]);
+
+  // …and keep the phone's keyboard from shoving the title and timer offscreen.
+  useKeyboardFit(phase === "typing");
 
   if (phase === "intro") {
     return (
@@ -253,8 +261,10 @@ export function TypingGame() {
   const target = prompts[index] ?? "";
 
   return (
+    // min-h-0 + overflow-hidden: with the keyboard up there may only be a few
+    // hundred px to work with, and nothing here is worth scrolling to reach.
     <div
-      className="flex flex-1 flex-col gap-4 py-4"
+      className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden py-2 sm:gap-4 sm:py-4"
       onPointerDown={() => inputRef.current?.focus()}
     >
       <GameTitle game="typing" title="PANIC TYPE" />
@@ -274,7 +284,7 @@ export function TypingGame() {
         key={errKey}
         className={`${
           errKey > 0 ? "animate-shake" : ""
-        } flex min-h-36 items-center justify-center rounded-2xl border-2 border-line bg-panel p-6 shadow-chunk`}
+        } flex min-h-24 flex-1 items-center justify-center overflow-hidden rounded-2xl border-2 border-line bg-panel p-4 shadow-chunk sm:min-h-36 sm:flex-none sm:p-6`}
       >
         <p className="text-center font-mono text-2xl leading-relaxed tracking-wide break-words">
           {target.split("").map((ch, i) => {
@@ -325,7 +335,9 @@ export function TypingGame() {
         className="w-full rounded-xl border-2 border-line bg-panel2 px-4 py-3 text-center font-mono text-xl text-paper placeholder:text-fog/50 focus:border-lemon focus:outline-none"
       />
 
-      <p className="text-center text-xs text-fog">
+      {/* Flavour only, and the intro already says it — on a phone the space
+          it costs is better spent on the prompt. */}
+      <p className="hidden text-center text-xs text-fog sm:block">
         exact match — capitals &amp; punctuation count
       </p>
     </div>
