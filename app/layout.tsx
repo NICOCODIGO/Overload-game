@@ -1,10 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Bungee, Space_Grotesk } from "next/font/google";
+import { Bungee, Space_Grotesk, VT323 } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 
 const bungee = Bungee({
   variable: "--font-bungee",
+  weight: "400",
+  subsets: ["latin"],
+});
+
+// Terminal/arcade pixel font for the small "flavour" text — taglines, hooks,
+// how-to, control hints. Characterful but readable; not for long reading.
+const vt323 = VT323({
+  variable: "--font-pixel",
   weight: "400",
   subsets: ["latin"],
 });
@@ -47,11 +55,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bungee.variable} ${grotesk.variable} h-full antialiased`}
+      className={`${bungee.variable} ${grotesk.variable} ${vt323.variable} antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* min-h-screen (absolute 100vh) so the flex column always fills the
+          viewport — the footer's mt-auto needs real free space to push into.
+          min-h-full depended on an html height chain that wasn't resolving. */}
+      <body className="min-h-screen flex flex-col">
         <Header />
-        <main className="flex-1 flex flex-col w-full max-w-3xl mx-auto px-4 pb-16">
+        <main className="flex-1 flex flex-col w-full max-w-3xl mx-auto px-4 pb-10">
           {children}
         </main>
       </body>

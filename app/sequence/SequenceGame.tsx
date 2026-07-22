@@ -122,7 +122,8 @@ export function SequenceGame() {
     const score = clearedRef.current;
     const time = elapsedRef.current;
     const emojis = attemptsRef.current.map((a) => (a ? "✅" : "❌"));
-    const display = `Level ${score} · ${time.toFixed(1)}s`;
+    // Time still breaks ties internally, but the shown score stays clean.
+    const display = `Level ${score}`;
     const isBest = submitBest("sequence", modeRef.current, {
       score,
       tiebreak: time,
@@ -312,9 +313,6 @@ export function SequenceGame() {
         newBest={newBest}
         bestDisplay={getBest("sequence", mode)?.display ?? null}
         streak={streak}
-        extraStats={[
-          { label: "Total time", value: `${summary.time.toFixed(1)}s` },
-        ]}
         onPlayAgain={() => startRun(mode)}
       />
     );

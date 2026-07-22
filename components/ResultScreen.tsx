@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { GameId, Mode } from "@/lib/daily";
 import { buildShareText, copyToClipboard } from "@/lib/share";
 import { useT } from "@/lib/i18n";
-import { PixelIcon } from "./PixelIcon";
+import { PixelIcon, type UiIcon } from "./PixelIcon";
 import { GameTitle } from "./GameTitle";
 
 /** Only the clipboard share text uses emoji — it's plain text pasted into
@@ -37,7 +37,6 @@ interface ResultScreenProps {
   newBest: boolean;
   bestDisplay: string | null;
   streak: number;
-  extraStats?: { label: string; value: string }[];
   onPlayAgain: () => void;
 }
 
@@ -76,6 +75,32 @@ export function ResultScreen(props: ResultScreenProps) {
   for (let i = 0; i < shown.length; i += 10) {
     rows.push(shown.slice(i, i + 10));
   }
+
+  // Same stat tiles as the intro screen — best for this mode, plus streak.
+  const isDaily = props.mode === "daily";
+  const stats: { icon: UiIcon; value: string; label: string; color: string }[] =
+    [
+      ...(props.bestDisplay
+        ? [
+            {
+              icon: (isDaily ? "trophy" : "target") as UiIcon,
+              value: props.bestDisplay,
+              label: isDaily ? t.statDaily : t.statSurvival,
+              color: isDaily ? "text-lemon" : "text-mint",
+            },
+          ]
+        : []),
+      ...(isDaily && props.streak > 0
+        ? [
+            {
+              icon: "flame" as UiIcon,
+              value: t.streakDays(props.streak),
+              label: t.statStreak,
+              color: "text-coral",
+            },
+          ]
+        : []),
+    ];
 
   return (
     <div className="animate-rise flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
@@ -116,25 +141,24 @@ export function ResultScreen(props: ResultScreenProps) {
             </div>
           ))}
         </div>
-        <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 border-t-2 border-line pt-3 text-sm text-fog">
-          {props.extraStats?.map((s) => (
-            <span key={s.label}>
-              {s.label}: <span className="text-paper">{s.value}</span>
-            </span>
-          ))}
-          {props.bestDisplay && (
-            <span className="flex items-center gap-1.5">
-              <PixelIcon name="trophy" size={14} />
-              {t.best} {props.bestDisplay}
-            </span>
-          )}
-          {props.mode === "daily" && props.streak > 0 && (
-            <span className="flex items-center gap-1.5">
-              <PixelIcon name="flame" size={14} />
-              {t.streak(props.streak)}
-            </span>
-          )}
-        </div>
+        {stats.length > 0 && (
+          <div className="flex gap-2 border-t-2 border-line pt-3">
+            {stats.map((s) => (
+              <div
+                key={s.label}
+                className="flex flex-1 flex-col items-center gap-1 rounded-lg bg-panel2 px-2 py-2.5"
+              >
+                <PixelIcon name={s.icon} size={16} />
+                <span className={`font-display text-sm ${s.color}`}>
+                  {s.value}
+                </span>
+                <span className="text-center font-display text-[9px] leading-tight tracking-wider text-fog">
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex w-full max-w-sm flex-col gap-3">

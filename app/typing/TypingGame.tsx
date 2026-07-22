@@ -106,10 +106,9 @@ export function TypingGame() {
     const score = resultsRef.current.filter(Boolean).length;
     const acc = accuracy();
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
+    // Accuracy still breaks ties internally, but the shown score stays clean.
     const display =
-      modeRef.current === "daily"
-        ? `${score}/${PROMPTS} · ${acc}%`
-        : `${score} prompts · ${acc}%`;
+      modeRef.current === "daily" ? `${score}/${PROMPTS}` : `${score} prompts`;
     const isBest = submitBest("typing", modeRef.current, {
       score,
       tiebreak: 100 - acc, // higher accuracy breaks ties
@@ -238,15 +237,14 @@ export function TypingGame() {
         dailyNum={dailyNumber()}
         scoreLine={
           mode === "daily"
-            ? `${summary.score}/${PROMPTS} · ${summary.acc}%`
-            : `${summary.score} prompts · ${summary.acc}%`
+            ? `${summary.score}/${PROMPTS}`
+            : `${summary.score} prompts`
         }
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
         bestDisplay={getBest("typing", mode)?.display ?? null}
         streak={streak}
-        extraStats={[{ label: "Accuracy", value: `${summary.acc}%` }]}
         onPlayAgain={() => startRun(mode)}
       />
     );

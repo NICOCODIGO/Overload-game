@@ -194,10 +194,9 @@ export function BlinkGame() {
     const score = resultsRef.current.filter(Boolean).length;
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
+    // Time still breaks ties internally, but the shown score stays clean.
     const display =
-      modeRef.current === "daily"
-        ? `${score}/${ROUNDS} · ${time.toFixed(1)}s`
-        : `${score} spotted · ${time.toFixed(1)}s`;
+      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} spotted`;
     const isBest = submitBest("blink", modeRef.current, {
       score,
       tiebreak: time,
@@ -340,9 +339,6 @@ export function BlinkGame() {
         newBest={newBest}
         bestDisplay={getBest("blink", mode)?.display ?? null}
         streak={streak}
-        extraStats={[
-          { label: "Spot time", value: `${summary.time.toFixed(1)}s` },
-        ]}
         onPlayAgain={() => startRun(mode)}
       />
     );

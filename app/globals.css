@@ -35,6 +35,7 @@
 @theme inline {
   --font-display: var(--font-bungee), system-ui, sans-serif;
   --font-sans: var(--font-grotesk), system-ui, sans-serif;
+  --font-pixel: var(--font-pixel), ui-monospace, monospace;
 }
 
 body {
