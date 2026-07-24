@@ -7,6 +7,7 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, type Rng } from "@/lib/rng";
@@ -153,7 +154,7 @@ export function SequenceGame() {
       // Channel closed before the code was keyed in.
       elapsedRef.current += (performance.now() - attemptStartRef.current) / 1000;
       attemptsRef.current.push(false);
-      livesRef.current -= 1;
+      if (!UNLIMITED_LIVES) livesRef.current -= 1;
       setLives(livesRef.current);
       sfx.error();
       if (livesRef.current <= 0) {
@@ -364,14 +365,20 @@ export function SequenceGame() {
                 ⚡ MEMORIZE — SIGNAL GOES DARK
               </p>
             )}
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            {/* One row, always. The arrow size scales to how many there are
+                (container-query units) and caps at the desktop size, so even a
+                10-long code fits left-to-right without wrapping. */}
+            <div
+              className="flex w-full flex-nowrap items-center justify-center gap-1 overflow-hidden"
+              style={{ containerType: "inline-size" }}
+            >
               {seq.map((dir, i) => {
                 const entered = i < pos;
                 const isNext = i === pos && phase === "input";
                 return (
                   <span
                     key={i}
-                    className={`font-display text-4xl transition-all ${
+                    className={`shrink-0 font-display transition-all ${
                       entered
                         ? "scale-110 text-mint"
                         : hidden
@@ -380,6 +387,9 @@ export function SequenceGame() {
                             ? "text-paper"
                             : "text-fog opacity-70"
                     }`}
+                    style={{
+                      fontSize: `min(2.25rem, ${(72 / seq.length).toFixed(2)}cqw)`,
+                    }}
                     aria-hidden
                   >
                     {entered || !hidden ? <Arrow dir={dir} /> : "▪"}

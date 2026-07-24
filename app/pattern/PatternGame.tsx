@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { IntroScreen } from "@/components/IntroScreen";
 import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
@@ -393,7 +394,7 @@ export function PatternGame() {
     lockedRef.current = true;
     timer.stop();
     resultsRef.current.push(correct);
-    if (!correct) livesRef.current -= 1;
+    if (!correct && !UNLIMITED_LIVES) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: correct, msg });
     setPhaseSafe("gap"); // options stay visible; the right one gets ringed
@@ -415,7 +416,7 @@ export function PatternGame() {
         }
       },
       // A miss lingers: the rule is on screen and deserves reading time.
-      correct ? 650 : 2600
+      correct ? 650 : 2900
     );
   }
 
@@ -546,11 +547,14 @@ export function PatternGame() {
           labels appear between the boxes (and interleaved runs get their
           two woven threads tinted apart). */}
       <div className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-line bg-panel p-5 shadow-chunk">
-        <div className="flex flex-wrap items-center justify-center gap-1">
+        {/* Always one row. The tiles flex to share the row's width equally
+            (capped at the desktop size), so any count of terms — and any glyph,
+            arrows included — fits on a single line instead of overflowing. */}
+        <div className="flex w-full items-center justify-center gap-1">
           {r?.terms.map((term, i) => (
-            <div key={i} className="flex items-center gap-1">
+            <Fragment key={i}>
               <span
-                className={`flex h-14 min-w-14 items-center justify-center rounded-xl border-2 bg-panel2 px-2 font-display text-xl ${
+                className={`flex aspect-square min-w-0 max-w-14 flex-1 items-center justify-center overflow-hidden rounded-xl border-2 bg-panel2 px-1 font-display text-base sm:text-xl ${
                   revealRule && r.weave
                     ? i % 2 === 0
                       ? "border-sky text-sky"
@@ -560,20 +564,32 @@ export function PatternGame() {
               >
                 <TermView term={term} />
               </span>
-              {revealRule && r.steps?.[i] && (
-                <span className="animate-pop font-display text-xs text-mint">
+              {r?.steps?.[i] && (
+                // Rendered (reserving its width) even during play, just hidden,
+                // so revealing the rule never re-wraps the row or grows the card.
+                <span
+                  className={`shrink-0 font-display text-[10px] text-mint sm:text-xs ${
+                    revealRule ? "animate-pop" : "invisible"
+                  }`}
+                >
                   {r.steps[i]}
                 </span>
               )}
-            </div>
+            </Fragment>
           ))}
-          <span className="flex h-14 min-w-14 items-center justify-center rounded-xl border-2 border-lemon bg-panel2 px-2 font-display text-xl text-lemon">
+          <span className="flex aspect-square min-w-0 max-w-14 flex-1 items-center justify-center overflow-hidden rounded-xl border-2 border-lemon bg-panel2 px-1 font-display text-base text-lemon sm:text-xl">
             ?
           </span>
         </div>
 
-        {revealRule && r && (
-          <p className="animate-pop w-full border-t-2 border-line pt-2 text-center text-xs text-fog">
+        {r && (
+          // Also reserved during play (invisible) so its height is baked into
+          // the card from the start — the options never get shoved down.
+          <p
+            className={`w-full border-t-2 border-line pt-2 text-center text-xs text-fog ${
+              revealRule ? "animate-pop" : "invisible"
+            }`}
+          >
             THE RULE: <span className="text-paper">{r.rule}</span>
           </p>
         )}

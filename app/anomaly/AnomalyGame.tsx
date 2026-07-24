@@ -7,6 +7,7 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, randInt, type Rng } from "@/lib/rng";
@@ -17,7 +18,7 @@ import {
   submitBest,
 } from "@/lib/storage";
 
-const ROUNDS = 12;
+const ROUNDS = 14;
 const SURVIVAL_CAP = 120;
 const LIVES = 3;
 const WRONG_TAP_PENALTY = 1.0; // seconds
@@ -77,14 +78,17 @@ function roundPlan(i: number): {
   if (i < 6) return { kind: "shape", count: 100 + (i - 3) * 20, duration: 7 + (i - 3) * 0.5 };
   if (i < 9)
     return { kind: "conjunction", count: 140 + (i - 6) * 25, duration: 9 + (i - 6) * 0.5 };
-  if (i < 12) return { kind: "char", count: 150 + (i - 9) * 30, duration: 10 + (i - 9) };
-  // Survival past the daily's 12: the two hardest kinds (conjunction & char)
+  // Char twins to the finish — denser every sector and, unlike before, with
+  // *less* time each round, so the final sectors are the cruelest.
+  if (i < 14)
+    return { kind: "char", count: 150 + (i - 9) * 30, duration: 11 - (i - 9) * 0.5 };
+  // Survival past the daily: the two hardest kinds (conjunction & char)
   // alternate, density creeps toward a cap, time grinds down to a floor.
-  const laps = i - 12;
+  const laps = i - 14;
   return {
     kind: laps % 2 === 0 ? "char" : "conjunction",
-    count: Math.min(260, 210 + laps * 4),
-    duration: Math.max(5.5, 12 - laps * 0.4),
+    count: Math.min(300, 250 + laps * 4),
+    duration: Math.max(5.5, 10 - laps * 0.4),
   };
 }
 
@@ -229,7 +233,7 @@ export function AnomalyGame() {
     elapsedRef.current += Math.max(0, budget - timer.remaining());
     timer.stop();
     resultsRef.current.push(found);
-    if (!found) livesRef.current -= 1;
+    if (!found && !UNLIMITED_LIVES) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: found, msg, reveal });
     setPhase("gap");

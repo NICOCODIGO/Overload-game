@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Panic Type — Overload",
     description:
-      "Type it exactly. The clock has no mercy. 20 escalating prompts a day — how's your accuracy under pressure?",
+      "Type it exactly how it is written. The clock has no mercy. 20 escalating prompts a day — how's your accuracy under pressure?",
     url: "/typing",
   },
 };

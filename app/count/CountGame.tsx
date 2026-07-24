@@ -7,6 +7,7 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
@@ -17,7 +18,7 @@ import {
   submitBest,
 } from "@/lib/storage";
 
-const ROUNDS = 12;
+const ROUNDS = 14;
 const SURVIVAL_CAP = 120;
 const LIVES = 3;
 
@@ -69,6 +70,7 @@ interface CountItem {
   x: number; // percent
   y: number; // percent
   wobble: number; // small per-item scale variance
+  match: boolean; // satisfies the question — the ones that had to be counted
 }
 
 type QuestionKind =
@@ -123,6 +125,9 @@ function roundPlan(i: number): {
     { family: "shapes", kind: "glyphColor", count: 20, duration: 10 },
     { family: "numbers", kind: "hugeColor", count: 20, duration: 11 },
     { family: "numbers", kind: "hugeGlyph", count: 22, duration: 11 },
+    // Two more to finish: the nastiest combos, denser and with less time.
+    { family: "shapes", kind: "glyphColor", count: 24, duration: 9.5 },
+    { family: "numbers", kind: "hugeColor", count: 26, duration: 9.5 },
   ];
   if (i < plans.length) return plans[i];
   // Survival past the daily's 12: cycle the four combo/hunt kinds forever,
@@ -140,7 +145,7 @@ function roundPlan(i: number): {
   // shrink below a comfortable tap/read size on a phone.
   return {
     ...rotation[laps % rotation.length],
-    count: Math.min(46, 22 + laps),
+    count: Math.min(46, 24 + laps),
     duration: Math.max(6, 11 - laps * 0.25),
   };
 }
@@ -172,7 +177,7 @@ function makeItem(
   rng: Rng,
   meta: RoundMeta,
   match: boolean
-): Omit<CountItem, "x" | "y" | "wobble"> {
+): Omit<CountItem, "x" | "y" | "wobble" | "match"> {
   const { family, kind, pool, colorIdx, glyphIdx } = meta;
   const target = pool[glyphIdx];
   // Default size is always "normal" — size only varies on rounds that ask
@@ -325,9 +330,10 @@ function generateRound(rng: Rng, i: number): CountRound {
 
   const looks = shuffle(
     rng,
-    Array.from({ length: plan.count }, (_, idx) =>
-      makeItem(rng, meta, idx < answer)
-    )
+    Array.from({ length: plan.count }, (_, idx) => {
+      const match = idx < answer;
+      return { ...makeItem(rng, meta, match), match };
+    })
   );
 
   // Wider-than-tall field: the keypad needs the bottom of the screen.
@@ -440,12 +446,18 @@ export function CountGame() {
     elapsedRef.current += Math.max(0, budget - timer.remaining());
     timer.stop();
     resultsRef.current.push(correct);
-    if (!correct) livesRef.current -= 1;
+    if (!correct && !UNLIMITED_LIVES) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: correct, msg });
     setPhaseSafe("gap");
     if (correct) sfx.success();
     else sfx.error();
+
+    // A miss lingers: the non-matches fade and the ones you had to count are
+    // left standing, so give real time to see what the answer was — plus half a
+    // second per item beyond six, since a big count takes longer to recount.
+    const answer = roundsRef.current[roundRef.current].answer;
+    const missLinger = 2600 + Math.max(0, answer - 6) * 500;
 
     gapTimeoutRef.current = window.setTimeout(
       () => {
@@ -461,7 +473,7 @@ export function CountGame() {
           beginRound();
         }
       },
-      correct ? 700 : 1100
+      correct ? 700 : missLinger
     );
   }
 
@@ -528,7 +540,7 @@ export function CountGame() {
         tagline="Count the chaos. Answer in one tap."
         howTo={[
           "A mob of numbers and shapes appears — count only what the question asks for, then tap the keypad.",
-          "6 and 9 wear a bar on the bottom, so a spinning one still reads right. A wrong or slow count costs a life.",
+          "6 and 9 wear a bar on the bottom, so a spinning one still reads right. Read very carefully.",
         ]}
         controlsHint="Tap the keypad · number keys on desktop"
         onStart={startRun}
@@ -563,6 +575,10 @@ export function CountGame() {
   const barHint = r?.parts.some((p) => p.chip && BARRED_DIGITS.has(p.text))
     ? " · the bar marks the bottom"
     : "";
+
+  // On a miss, fade out everything that didn't need counting so the items that
+  // did are laid bare — the player sees exactly what they were meant to tally.
+  const revealing = phase === "gap" && gap !== null && !gap.ok;
 
   return (
     <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
@@ -627,16 +643,19 @@ export function CountGame() {
           <span
             key={i}
             aria-hidden
-            className="absolute select-none font-display leading-none"
+            className="absolute select-none font-display leading-none transition-[opacity,transform] duration-500"
             style={{
               left: `${item.x}%`,
               top: `${item.y}%`,
-              transform: `translate(-50%, -50%) scale(${item.wobble})`,
+              transform: `translate(-50%, -50%) scale(${
+                item.wobble * (revealing && item.match ? 1.2 : 1)
+              })`,
               fontSize: `${(
                 Math.min(66 / r.cols, 11) * SIZE_SCALE[item.size]
               ).toFixed(2)}cqw`,
               color: COLORS[item.colorIdx].css,
-              zIndex: SIZE_Z[item.size],
+              opacity: revealing && !item.match ? 0 : 1,
+              zIndex: revealing && item.match ? 10 : SIZE_Z[item.size],
             }}
           >
             <span
@@ -648,37 +667,37 @@ export function CountGame() {
             </span>
           </span>
         ))}
-
-        {/* Between-round overlay */}
-        {phase === "gap" && gap && (
-          <div className="absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 justify-center">
-            <p
-              className={`animate-pop rounded-xl border-2 px-4 py-2 font-display text-lg backdrop-blur ${
-                gap.ok
-                  ? "border-mint bg-ink/80 text-mint"
-                  : "border-coral bg-ink/80 text-coral"
-              }`}
-            >
-              {gap.msg}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Keypad */}
-      <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-2">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((d) => (
-          <button
-            key={d}
-            type="button"
-            disabled={phase !== "scan"}
-            onPointerDown={() => handleDigit(d)}
-            className="h-12 rounded-lg border-2 border-line bg-panel2 font-display text-xl text-paper shadow-chunk-sm transition-transform active:translate-y-0.5 active:shadow-none disabled:opacity-40"
+      {/* Keypad — or, between rounds, the verdict takes its place (the mob above
+          stays clear so the revealed items read cleanly). */}
+      {phase === "gap" && gap ? (
+        <div className="mx-auto flex min-h-[6.5rem] w-full max-w-md items-center justify-center">
+          <p
+            className={`animate-pop rounded-xl border-2 px-6 py-3 text-center font-display text-2xl ${
+              gap.ok
+                ? "border-mint bg-panel2 text-mint"
+                : "border-coral bg-panel2 text-coral"
+            }`}
           >
-            {d}
-          </button>
-        ))}
-      </div>
+            {gap.msg}
+          </p>
+        </div>
+      ) : (
+        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-2">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((d) => (
+            <button
+              key={d}
+              type="button"
+              disabled={phase !== "scan"}
+              onPointerDown={() => handleDigit(d)}
+              className="h-12 rounded-lg border-2 border-line bg-panel2 font-display text-xl text-paper shadow-chunk-sm transition-transform active:translate-y-0.5 active:shadow-none disabled:opacity-40"
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Overclocked — Overload",
     description:
-      "Quick — what time is it? 20 clocks a day, and the late ones vanish before you answer.",
+      "Quick! What time is it? 20 clocks a day, and the late ones vanish before you answer.",
     url: "/clock",
   },
 };

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { GameId, Mode } from "@/lib/daily";
 import { dailyNumber } from "@/lib/daily";
-import { getBest, getDailyResult, getStreak } from "@/lib/storage";
+import { getBest } from "@/lib/storage";
 import { useClientValue } from "@/lib/hooks";
 import { unlockAudio } from "@/lib/audio";
 import { useT } from "@/lib/i18n";
@@ -26,23 +26,19 @@ interface IntroScreenProps {
 export function IntroScreen(props: IntroScreenProps) {
   const t = useT();
   const num = useClientValue(dailyNumber, 0);
-  const todayResult = useClientValue(
-    () => getDailyResult(props.game, dailyNumber()),
-    null
-  );
   const bestDaily = useClientValue(() => getBest(props.game, "daily"), null);
   const bestSurvival = useClientValue(
     () => getBest(props.game, "survival"),
     null
   );
-  const streak = useClientValue(getStreak, 0);
 
   const start = (mode: Mode) => {
     unlockAudio(); // user gesture — safe moment to create the AudioContext
     props.onStart(mode);
   };
 
-  // Only the stats that exist get a tile, so the row stays balanced.
+  // Per-game records only. The daily streak is site-wide, so it lives once in
+  // the header rather than being repeated on every game's intro.
   const stats: {
     icon: UiIcon;
     value: string;
@@ -66,16 +62,6 @@ export function IntroScreen(props: IntroScreenProps) {
             value: bestSurvival.display,
             label: t.statSurvival,
             color: "text-mint",
-          },
-        ]
-      : []),
-    ...(streak > 0
-      ? [
-          {
-            icon: "flame" as UiIcon,
-            value: t.streakDays(streak),
-            label: t.statStreak,
-            color: "text-coral",
           },
         ]
       : []),
@@ -136,11 +122,6 @@ export function IntroScreen(props: IntroScreenProps) {
           className="rounded-xl border-2 border-black/40 bg-lemon px-6 py-3 font-display text-lg text-ink shadow-chunk transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none sm:py-4"
         >
           {t.daily} #{num || "…"}
-          {todayResult && (
-            <span className="block text-xs font-sans font-normal">
-              {t.doneToday} {todayResult.display} — {t.playAgainQ}
-            </span>
-          )}
         </button>
         <button
           type="button"
@@ -154,7 +135,7 @@ export function IntroScreen(props: IntroScreenProps) {
         </button>
         <Link
           href="/"
-          className="py-1 text-center font-display text-xs text-fog hover:text-paper"
+          className="flex items-center justify-center rounded-xl border-2 border-line bg-panel/60 px-6 py-2.5 text-center font-display text-sm text-fog shadow-chunk-sm transition-transform hover:-translate-y-0.5 hover:text-paper active:translate-y-1 active:shadow-none"
         >
           {t.backToArcade}
         </Link>

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { GameId, Mode } from "@/lib/daily";
 import { buildShareText, copyToClipboard } from "@/lib/share";
 import { useT } from "@/lib/i18n";
 import { PixelIcon, type UiIcon } from "./PixelIcon";
 import { GameTitle } from "./GameTitle";
+import { Confetti } from "./Confetti";
 
 /** Only the clipboard share text uses emoji — it's plain text pasted into
     chats. On screen everything renders as pixel sprites. */
@@ -44,6 +45,7 @@ interface ResultScreenProps {
 export function ResultScreen(props: ResultScreenProps) {
   const t = useT();
   const [copied, setCopied] = useState(false);
+  const bestBadgeRef = useRef<HTMLDivElement>(null);
 
   // Survival runs can be 100+ rounds — far too many sprites to render or to
   // paste into a chat. Show only the tail (where the run got hard and ended)
@@ -104,6 +106,7 @@ export function ResultScreen(props: ResultScreenProps) {
 
   return (
     <div className="animate-rise flex flex-1 flex-col items-center justify-center gap-4 py-4 text-center sm:gap-6 sm:py-10">
+      {props.newBest && <Confetti originRef={bestBadgeRef} />}
       <GameTitle game={props.game} title={props.gameName.toUpperCase()} />
 
       <h2
@@ -115,7 +118,10 @@ export function ResultScreen(props: ResultScreenProps) {
       </h2>
 
       {props.newBest && (
-        <div className="animate-pop -rotate-2 rounded-lg border-2 border-black/40 bg-lemon px-4 py-1.5 font-display text-sm text-ink shadow-chunk-sm">
+        <div
+          ref={bestBadgeRef}
+          className="animate-pop -rotate-2 rounded-lg border-2 border-black/40 bg-lemon px-4 py-1.5 font-display text-sm text-ink shadow-chunk-sm"
+        >
           {t.newBest}
         </div>
       )}
@@ -178,7 +184,7 @@ export function ResultScreen(props: ResultScreenProps) {
         </button>
         <Link
           href="/"
-          className="py-1 font-display text-xs text-fog hover:text-paper"
+          className="flex items-center justify-center rounded-xl border-2 border-line bg-panel/60 px-6 py-2.5 font-display text-sm text-fog shadow-chunk-sm transition-transform hover:-translate-y-0.5 hover:text-paper active:translate-y-1 active:shadow-none"
         >
           {t.backToArcade}
         </Link>

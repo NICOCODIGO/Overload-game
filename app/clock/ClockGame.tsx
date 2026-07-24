@@ -7,6 +7,7 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
@@ -242,7 +243,7 @@ export function ClockGame() {
     lockedRef.current = true;
     timer.stop();
     resultsRef.current.push(passed);
-    if (!passed) livesRef.current -= 1;
+    if (!passed && !UNLIMITED_LIVES) livesRef.current -= 1;
     setLives(livesRef.current);
     setFeedback({ ok: passed, msg });
     setPhase("feedback");
@@ -261,13 +262,17 @@ export function ClockGame() {
         setFeedback(null);
         beginRound();
       }
-    }, 850);
+      // A miss lingers so the highlighted correct answer is readable; a hit
+      // stays snappy.
+    }, passed ? 800 : 1700);
   }
 
   function beginRound() {
     const r = roundsRef.current[roundRef.current];
     sfx.reveal();
-    const slowMsg = r.reverse ? "TOO SLOW!" : `TOO SLOW — ${r.answer}`;
+    // Short and the same for every round — the correct answer button gets
+    // highlighted on the reveal, so the message doesn't need to name it.
+    const slowMsg = "TOO SLOW!";
     if (r.flash) {
       // Preview: watch the timelapse; the answer clock starts once it's gone.
       setPhase("preview");
@@ -288,7 +293,7 @@ export function ClockGame() {
     if (option === r.answer) {
       advance(true, "NICE ✓");
     } else {
-      advance(false, r.reverse ? "WRONG FACE!" : `IT WAS ${r.answer}`);
+      advance(false, "WRONG!");
     }
   }
 
@@ -385,18 +390,25 @@ export function ClockGame() {
 
       <TimerBar progress={phase === "answer" ? timer.progress : 1} />
 
-      {/* Clock card */}
-      <div className="relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-line bg-panel p-4 shadow-chunk">
+      {/* Clock card. One fixed height per round type — compact for flip rounds
+          (the four faces live below), clock-sized otherwise — so swapping in
+          the feedback message never resizes the card and shoves everything
+          down. */}
+      <div
+        className={`relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-line bg-panel p-4 shadow-chunk ${
+          r?.reverse ? "min-h-28" : "min-h-[240px] sm:min-h-[320px]"
+        }`}
+      >
         {phase === "feedback" && feedback ? (
           <p
-            className={`animate-pop flex min-h-56 items-center font-display text-2xl ${
+            className={`animate-pop text-center font-display text-2xl ${
               feedback.ok ? "text-mint" : "text-coral"
             }`}
           >
             {feedback.msg}
           </p>
         ) : r?.reverse ? (
-          <div className="flex min-h-28 flex-col items-center justify-center gap-1">
+          <div className="flex flex-col items-center justify-center gap-1">
             <p className="font-display text-xs text-fog">MATCH THIS TIME</p>
             <p className="font-display text-5xl text-lemon">{r.answer}</p>
           </div>
@@ -434,7 +446,12 @@ export function ClockGame() {
               type="button"
               disabled={phase !== "answer"}
               onPointerDown={() => phase === "answer" && handlePick(option)}
-              className={`rounded-2xl border-2 border-line bg-panel2 font-display text-2xl text-paper shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-40 ${
+              className={`rounded-2xl border-2 font-display text-2xl text-paper shadow-chunk transition-transform active:translate-y-1 active:shadow-none ${
+                phase === "feedback" && option === r?.answer
+                  ? // The answer that should've been tapped, ringed on the reveal.
+                    "border-mint bg-panel2 ring-4 ring-mint/60"
+                  : "border-line bg-panel2 disabled:opacity-40"
+              } ${
                 r?.reverse ? "flex items-center justify-center p-1 sm:p-2" : "h-14 sm:h-16"
               }`}
             >
@@ -521,7 +538,7 @@ function ClockFace({
       viewBox="0 0 200 200"
       className={
         mini
-          ? "h-32 w-32 max-w-full sm:h-52 sm:w-52"
+          ? "h-32 w-32 max-w-full sm:h-40 sm:w-40"
           : "h-52 w-52 max-w-full sm:h-72 sm:w-72"
       }
       role="img"
