@@ -7,6 +7,7 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, randInt, type Rng } from "@/lib/rng";
@@ -17,7 +18,7 @@ import {
   submitBest,
 } from "@/lib/storage";
 
-const ROUNDS = 10;
+const ROUNDS = 12;
 const SURVIVAL_CAP = 99;
 const LIVES = 3;
 const WRONG_TAP_PENALTY = 1.5; // seconds
@@ -66,19 +67,21 @@ interface BlinkRound {
 
 /** Escalation: loud recolors → silhouette swaps → size creep → subtle hues. */
 function roundPlan(i: number): { change: ChangeKind; count: number; duration: number } {
-  const counts = [12, 14, 16, 16, 18, 20, 22, 24, 26, 28];
-  const durations = [10, 10, 11, 11, 12, 12, 13, 13, 14, 14];
+  // Ends on four straight subtle-hue rounds with the biggest, densest mobs —
+  // the cruelest way this game gets.
+  const counts = [12, 14, 16, 16, 18, 20, 22, 24, 26, 28, 30, 32];
+  const durations = [10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 14, 14];
   if (i < counts.length) {
     const change: ChangeKind =
       i < 3 ? "color" : i < 6 ? "glyph" : i < 8 ? "size" : "subtleColor";
     return { change, count: counts[i], duration: durations[i] };
   }
-  // Survival past the daily's 10: the two subtlest changes (glyph swap &
+  // Survival past the daily: the two subtlest changes (glyph swap &
   // near-neighbor hue) alternate, mob toward a cap, time toward a floor.
   const laps = i - counts.length;
   return {
     change: laps % 2 === 0 ? "subtleColor" : "glyph",
-    count: Math.min(40, 28 + laps),
+    count: Math.min(44, 32 + laps),
     duration: Math.max(7, 14 - laps * 0.3),
   };
 }
@@ -159,6 +162,9 @@ export function BlinkGame() {
   const [gap, setGap] = useState<Gap | null>(null);
   const [frame, setFrame] = useState<Frame>("a");
   const [shakeKey, setShakeKey] = useState(0);
+  // On a miss reveal, toggles the changed item between before/after so the
+  // change animates in place.
+  const [revealAlt, setRevealAlt] = useState(false);
   const [newBest, setNewBest] = useState(false);
   const [streak, setStreak] = useState(0);
   const [survived, setSurvived] = useState(false);
@@ -224,7 +230,7 @@ export function BlinkGame() {
     elapsedRef.current += Math.max(0, budget - timer.remaining());
     timer.stop();
     resultsRef.current.push(found);
-    if (!found) livesRef.current -= 1;
+    if (!found && !UNLIMITED_LIVES) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: found, msg, reveal });
     setPhaseSafe("gap");
@@ -245,7 +251,8 @@ export function BlinkGame() {
           beginRound();
         }
       },
-      reveal ? 1400 : 700
+      // Longer on a reveal so the before/after animation cycles a few times.
+      reveal ? 2000 : 700
     );
   }
 
@@ -304,6 +311,15 @@ export function BlinkGame() {
     return () => window.clearTimeout(t);
   }, [phase, round]);
 
+  // Reveal loop: flip the changed item between its two states so the miss shows
+  // WHAT changed — shape morphs, size pulses, or color swaps, right in place.
+  useEffect(() => {
+    if (phase !== "gap" || !gap?.reveal) return;
+    setRevealAlt(true); // start on the "after" (the version that was on screen)
+    const id = window.setInterval(() => setRevealAlt((v) => !v), 550);
+    return () => window.clearInterval(id);
+  }, [phase, gap?.reveal]);
+
   // Clean up the gap timeout if the player navigates away mid-run.
   useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
 
@@ -347,6 +363,18 @@ export function BlinkGame() {
   const r = rounds[round];
   const blank = phase === "scan" && (frame === "blank1" || frame === "blank2");
   const altered = phase === "scan" ? frame === "b" : true; // gap shows frame B
+  // During a miss reveal the changed item alternates (revealAlt); otherwise it
+  // just follows the flicker frames.
+  const changedAlt = phase === "gap" && !!gap?.reveal ? revealAlt : altered;
+
+  // On a miss we ring the changed item, so park the banner in the opposite half
+  // of the scene — otherwise it lands on the very thing it's revealing.
+  const changedY = r ? (r.items[r.changedIdx]?.y ?? 50) : 50;
+  const bannerSpot = !gap?.reveal
+    ? "top-4"
+    : changedY > 50
+      ? "top-3"
+      : "bottom-3";
 
   return (
     <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
@@ -368,13 +396,16 @@ export function BlinkGame() {
         className={`${shakeKey > 0 ? "animate-shake" : ""} touch-surface relative mx-auto max-h-[50dvh] w-full max-w-md overflow-hidden rounded-2xl border-2 border-line bg-panel shadow-chunk sm:max-h-none`}
         style={{ aspectRatio: "4 / 3", containerType: "inline-size" }}
       >
-        {!blank &&
-          r?.items.map((item, i) => {
+        {/* Items stay mounted during the blank flashes — just hidden — so the
+            scene only *looks* dark. Tap targets remain live, so spotting the
+            change mid-blink and tapping it still counts. */}
+        {r?.items.map((item, i) => {
             const isChanged = i === r.changedIdx;
-            const glyph = isChanged && altered ? r.altGlyph : item.glyph;
+            const glyph = isChanged && changedAlt ? r.altGlyph : item.glyph;
             const colorIdx =
-              isChanged && altered ? r.altColorIdx : item.colorIdx;
-            const big = isChanged && altered && r.altBig;
+              isChanged && changedAlt ? r.altColorIdx : item.colorIdx;
+            const big = isChanged && changedAlt && r.altBig;
+            const ringed = !!gap?.reveal && isChanged;
             return (
               <button
                 key={i}
@@ -383,27 +414,40 @@ export function BlinkGame() {
                 aria-label={isChanged ? "the thing that changes" : undefined}
                 onPointerDown={() => handleTap(i)}
                 className={`absolute select-none leading-none ${
-                  gap?.reveal && isChanged
-                    ? "z-10 rounded-full ring-4 ring-coral"
+                  blank ? "opacity-0" : ""
+                } ${
+                  ringed
+                    ? "z-10 flex items-center justify-center rounded-full ring-4 ring-coral transition-colors duration-300"
                     : ""
                 }`}
                 style={{
                   left: `${item.x}%`,
                   top: `${item.y}%`,
-                  transform: `translate(-50%, -50%) scale(${big ? 1.45 : 1})`,
+                  transform: "translate(-50%, -50%)",
                   fontSize: `${(66 / r.cols).toFixed(2)}cqw`,
                   color: COLORS[colorIdx],
                   padding: "0.14em",
+                  // A square box makes rounded-full a real circle. It's fixed —
+                  // the size-change pulse happens on the glyph inside, so the
+                  // ring itself stays a still circle.
+                  ...(ringed ? { width: "1.85em", height: "1.85em" } : null),
                 }}
               >
-                {glyph}
+                <span
+                  className={`inline-block ${
+                    ringed ? "transition-transform duration-300" : ""
+                  }`}
+                  style={{ transform: `scale(${big ? 1.45 : 1})` }}
+                >
+                  {glyph}
+                </span>
               </button>
             );
           })}
 
-        {/* Between-round overlay */}
+        {/* Between-round overlay — kept clear of the ringed change on a miss */}
         {phase === "gap" && gap && (
-          <div className="absolute inset-x-0 top-4 z-20 flex justify-center">
+          <div className={`absolute inset-x-0 z-20 flex justify-center ${bannerSpot}`}>
             <p
               className={`animate-pop rounded-xl border-2 px-4 py-2 font-display text-lg backdrop-blur ${
                 gap.ok

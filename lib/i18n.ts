@@ -19,6 +19,10 @@ interface Dict {
   daily: string;
   doneBadge: string;
   noBestYet: string;
+  /** Menu-card daily status. */
+  perfect: string;
+  doneLabel: string;
+  playToday: string;
   survival: string;
   survivalSub: string;
   doneToday: string;
@@ -26,6 +30,7 @@ interface Dict {
   dailyBest: string;
   survivalBest: string;
   streak: (n: number) => string;
+  streakHint: string;
   /** Short tile labels + value for the intro-screen stat row. */
   statDaily: string;
   statSurvival: string;
@@ -53,6 +58,9 @@ const EN: Dict = {
   daily: "DAILY",
   doneBadge: "✓ DAILY",
   noBestYet: "no best yet — play!",
+  perfect: "PERFECT",
+  doneLabel: "DONE",
+  playToday: "play today's daily",
   survival: "SURVIVAL",
   survivalSub: "endless — how long can you last?",
   doneToday: "done today:",
@@ -60,6 +68,7 @@ const EN: Dict = {
   dailyBest: "Daily best:",
   survivalBest: "Survival best:",
   streak: (n) => `${n}-day streak`,
+  streakHint: "Play every day to grow your streak.",
   statDaily: "DAILY BEST",
   statSurvival: "SURVIVAL BEST",
   statStreak: "STREAK",
@@ -79,13 +88,13 @@ const EN: Dict = {
   hooks: {
     simon: "Only obey when Simon says. The buttons will lie to you.",
     sequence: "Intercept the code. Re-key it before the channel closes.",
-    typing: "Type it exactly. The clock has no mercy.",
-    clock: "Quick — what time is it? The hands won't wait.",
+    typing: "Type it exactly how it is written. The clock has no mercy.",
+    clock: "Quick! What time is it? The hands won't wait, and neither will the clock.",
     anomaly: "One of them doesn't belong. Find it before the feed cuts.",
-    count: "Count the chaos — but only the ones we ask for.",
+    count: "Count the chaos, but only the ones we ask for. Requires focus.",
     pattern: "2, 4, 8, 16… the pattern knows what comes next. Do you?",
     scramble: "Unscramble the word — but junk letters are hidden in the pile.",
-    blink: "The scene flickers. One thing changed. Find it.",
+    blink: "The scene flickers. One thing changed. Can you find what changed?",
   },
 };
 
@@ -97,6 +106,9 @@ const ES: Dict = {
   daily: "DIARIO",
   doneBadge: "✓ DIARIO",
   noBestYet: "sin récord aún — ¡juega!",
+  perfect: "PERFECTO",
+  doneLabel: "HECHO",
+  playToday: "juega el reto de hoy",
   survival: "SUPERVIVENCIA",
   survivalSub: "sin fin — ¿cuánto aguantas?",
   doneToday: "hecho hoy:",
@@ -104,6 +116,7 @@ const ES: Dict = {
   dailyBest: "Mejor diario:",
   survivalBest: "Mejor supervivencia:",
   streak: (n) => `racha de ${n} días`,
+  streakHint: "Juega cada día para aumentar tu racha.",
   statDaily: "MEJOR DIARIO",
   statSurvival: "MEJOR SUPERV.",
   statStreak: "RACHA",

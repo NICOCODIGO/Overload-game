@@ -26,14 +26,15 @@ export function GameTitle({
     );
   }
   return (
-    // Icon/title scale down on phones (base) and restore at sm+ (desktop).
-    <div className="flex flex-col items-center text-center">
+    // Icon and title on a single row so the header stays short; both scale up
+    // at sm+ (desktop).
+    <div className="flex items-center justify-center gap-2 sm:gap-3">
       <PixelIcon
         name={game}
         size={56}
-        className="mx-auto h-9 w-9 sm:h-14 sm:w-14"
+        className="h-8 w-8 shrink-0 sm:h-11 sm:w-11"
       />
-      <span className="mt-1 font-display text-2xl text-lemon drop-shadow-[2px_2px_0_var(--color-coral)] sm:mt-2 sm:text-4xl sm:drop-shadow-[3px_3px_0_var(--color-coral)]">
+      <span className="font-display text-2xl text-lemon drop-shadow-[2px_2px_0_var(--color-coral)] sm:text-4xl sm:drop-shadow-[3px_3px_0_var(--color-coral)]">
         {title}
       </span>
     </div>

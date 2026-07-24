@@ -244,6 +244,56 @@ body.kb-fit {
 .group:hover .px-hop2 { animation: px-hop 1.2s ease-in-out infinite 0.4s; }
 .group:hover .px-hop3 { animation: px-hop 1.2s ease-in-out infinite 0.8s; }
 
+/* ---------------------------------------------------- menu title "overload"
+   The logo mostly sits still, then briefly stutters — a screen buckling under
+   the load. One long cycle keeps the glitch an occasional event, not a
+   constant distraction. `.glitch-a`/`.glitch-b` are ghost copies of the word
+   (see ArcadeGrid) that jab out in the accent colors during the stutter. */
+@keyframes title-jitter {
+  0%, 86%, 100% { transform: translate(0, 0) skewX(0); }
+  87% { transform: translate(-3px, 1px) skewX(-6deg); }
+  89% { transform: translate(3px, -1px) skewX(4deg); }
+  91% { transform: translate(-2px, 0) skewX(0); }
+  93% { transform: translate(2px, 1px) skewX(3deg); }
+  95% { transform: translate(-1px, -1px) skewX(-2deg); }
+}
+@keyframes title-flicker {
+  0%, 84%, 100% { opacity: 0; }
+  87% { opacity: 0.9; transform: translate(-3px, 0); }
+  91% { opacity: 0.6; transform: translate(3px, 0); }
+  95% { opacity: 0.85; transform: translate(-2px, 1px); }
+}
+.title-glitch {
+  animation: title-jitter 6.5s steps(1, end) infinite;
+}
+.title-glitch .glitch-ghost {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.title-glitch .glitch-a {
+  color: var(--color-mint);
+  animation: title-flicker 6.5s steps(1, end) infinite;
+}
+.title-glitch .glitch-b {
+  color: var(--color-sky);
+  animation: title-flicker 6.5s steps(1, end) infinite -0.1s;
+}
+
+/* ------------------------------------------------ streak flame
+   The header streak flame licks and sways so a live streak feels alive.
+   Pivots at the base like a real flame; reduced-motion kills it. */
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1, 1) rotate(0deg); }
+  25% { transform: scale(1.08, 0.94) rotate(-3deg); }
+  50% { transform: scale(0.95, 1.08) rotate(2deg); }
+  75% { transform: scale(1.05, 0.97) rotate(3deg); }
+}
+.flame-flicker {
+  transform-origin: 50% 90%;
+  animation: flame-flicker 0.85s ease-in-out infinite;
+}
+
 /* Respect prefers-reduced-motion: collapse all animation to near-instant */
 @media (prefers-reduced-motion: reduce) {
   *,

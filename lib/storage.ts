@@ -48,22 +48,28 @@ export function getBest(game: GameId, mode: Mode): BestScore | null {
   return { ...best, display: best.display.split(" · ")[0] };
 }
 
-/** Records a result; returns true if it's a new personal best. */
+/**
+ * Records a result. Returns true only when it *beats* an existing best — a
+ * genuine "new personal best" worth celebrating. Your very first score has
+ * nothing to beat, so it saves as the record but returns false (no fanfare —
+ * you can't break a record you just set).
+ */
 export function submitBest(
   game: GameId,
   mode: Mode,
   entry: Omit<BestScore, "date">
 ): boolean {
   const prev = getBest(game, mode);
-  const better =
-    !prev ||
-    entry.score > prev.score ||
-    (entry.score === prev.score &&
-      entry.tiebreak !== undefined &&
-      prev.tiebreak !== undefined &&
-      entry.tiebreak < prev.tiebreak);
-  if (better) set(`best:${game}:${mode}`, { ...entry, date: todayUTC() });
-  return better;
+  const beatsPrev =
+    !!prev &&
+    (entry.score > prev.score ||
+      (entry.score === prev.score &&
+        entry.tiebreak !== undefined &&
+        prev.tiebreak !== undefined &&
+        entry.tiebreak < prev.tiebreak));
+  // Save the first score (it becomes the record) and any improvement on it.
+  if (!prev || beatsPrev) set(`best:${game}:${mode}`, { ...entry, date: todayUTC() });
+  return beatsPrev;
 }
 
 // -------------------------------------------------------------- daily results

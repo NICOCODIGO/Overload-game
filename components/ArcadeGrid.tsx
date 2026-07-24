@@ -26,7 +26,14 @@ export function ArcadeGrid() {
     // into dead space or clips.
     <div className="animate-rise flex flex-1 flex-col gap-8 py-10">
       <div className="text-center">
-        <h1 className="font-display text-5xl leading-tight text-lemon drop-shadow-[4px_4px_0_var(--color-coral)] sm:text-6xl">
+        <h1 className="title-glitch relative inline-block font-display text-5xl leading-tight text-lemon drop-shadow-[4px_4px_0_var(--color-coral)] sm:text-6xl">
+          {/* Ghost copies that jab out in accent colors during the glitch. */}
+          <span aria-hidden className="glitch-ghost glitch-a">
+            OVERLOAD
+          </span>
+          <span aria-hidden className="glitch-ghost glitch-b">
+            OVERLOAD
+          </span>
           OVER
           <span className="text-coral drop-shadow-[4px_4px_0_var(--color-lemon)]">
             LOAD

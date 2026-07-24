@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { GameId } from "@/lib/daily";
 import { PixelIcon } from "./PixelIcon";
 import { dailyNumber } from "@/lib/daily";
-import { getBest, getDailyResult } from "@/lib/storage";
+import { getDailyResult } from "@/lib/storage";
 import { useClientValue } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 
@@ -27,21 +27,19 @@ const HOVER_ANIM: Partial<Record<GameId, string>> = {
 
 export function GameCard(props: GameCardProps) {
   const t = useT();
-  const best = useClientValue(() => getBest(props.game, "daily"), null);
-  const doneToday = useClientValue(
-    () => getDailyResult(props.game, dailyNumber()) !== null,
-    false
+  // Today's daily result (not the all-time best — that lives on the game's own
+  // screen). A flawless run has no ❌ in its strip, i.e. no hearts lost.
+  const today = useClientValue(
+    () => getDailyResult(props.game, dailyNumber()),
+    null
   );
-  const num = useClientValue(dailyNumber, 0);
+  const perfect = today ? !today.emojis.includes("❌") : false;
 
   return (
     <Link
       href={props.href}
       className="group relative flex flex-col items-center gap-2 rounded-2xl border-2 border-line bg-panel p-5 text-center shadow-chunk transition-transform hover:-translate-y-1 hover:border-lemon active:translate-y-0.5 active:shadow-none"
     >
-      <span className="absolute right-3 top-3 rounded-full bg-panel2 px-2 py-0.5 font-display text-[10px] text-lemon">
-        {doneToday ? t.doneBadge : `${t.daily} #${num || "…"}`}
-      </span>
       <PixelIcon
         name={props.game}
         size={44}
@@ -54,16 +52,24 @@ export function GameCard(props: GameCardProps) {
       <span className="font-pixel text-lg leading-tight text-fog">
         {props.hook}
       </span>
-      {best ? (
-        <span className="mt-1 flex items-center gap-2 rounded-lg bg-panel2 px-3 py-1.5">
-          <PixelIcon name="trophy" size={18} />
-          <span className="font-display text-sm text-lemon">
-            {best.display}
+      {today ? (
+        <span
+          className={`mt-1 flex items-center gap-2 rounded-lg px-3 py-1.5 ${
+            perfect ? "bg-lemon/15" : "bg-mint/15"
+          }`}
+        >
+          <PixelIcon name={perfect ? "trophy" : "check"} size={18} />
+          <span
+            className={`font-display text-sm ${
+              perfect ? "text-lemon" : "text-mint"
+            }`}
+          >
+            {perfect ? t.perfect : t.doneLabel} {today.display}
           </span>
         </span>
       ) : (
         <span className="mt-1 font-pixel text-base text-fog/70">
-          {t.noBestYet}
+          {t.playToday}
         </span>
       )}
     </Link>

@@ -7,9 +7,10 @@ import { TimerBar } from "@/components/TimerBar";
 import { Lives } from "@/components/Lives";
 import { GameTitle } from "@/components/GameTitle";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
-import { pick, shuffle, type Rng } from "@/lib/rng";
+import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
 import { WORD_POOLS } from "@/lib/scramble";
 import {
   bumpStreak,
@@ -30,6 +31,11 @@ interface ScrambleRound {
   showHint: boolean;
   tiles: string[]; // scrambled letters + decoys
   duration: number;
+  /** No-hint rounds pre-place one correct letter as a foothold. Slot position
+      is random; -1 means no anchor (hint rounds don't need one). */
+  anchorSlot: number;
+  /** Index into `tiles` of the locked anchor letter (-1 when no anchor). */
+  anchorTile: number;
 }
 
 /** Difficulty by round: length grows, decoys grow, the hint eventually hides. */
@@ -104,12 +110,22 @@ function generateRounds(rng: Rng, total: number, survival: boolean): ScrambleRou
       tiles = shuffle(rng, tiles);
       if (tiles.join("") === word) tiles = [...tiles.slice(1), tiles[0]];
     }
+    const showHint = plan.showHint && hint.length > 0;
+    // No hint? Lock one correct letter into a random slot as a foothold.
+    let anchorSlot = -1;
+    let anchorTile = -1;
+    if (!showHint) {
+      anchorSlot = randInt(rng, 0, word.length - 1);
+      anchorTile = tiles.findIndex((t) => t === word[anchorSlot]);
+    }
     return {
       word,
       hint,
-      showHint: plan.showHint && hint.length > 0,
+      showHint,
       tiles,
       duration: plan.duration,
+      anchorSlot,
+      anchorTile,
     };
   });
 }
@@ -126,7 +142,9 @@ export function ScrambleGame() {
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
   const [lives, setLives] = useState(LIVES);
-  const [placed, setPlaced] = useState<number[]>([]); // tile indices, in order
+  // One entry per letter position: the tile index placed there, or null. Fixed
+  // slots (not a running list) so the locked anchor can sit at any position.
+  const [slots, setSlots] = useState<(number | null)[]>([]);
   const [gap, setGap] = useState<Gap | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
   const [newBest, setNewBest] = useState(false);
@@ -141,7 +159,7 @@ export function ScrambleGame() {
   // Game logic runs off refs so timer callbacks never read stale data.
   const roundsRef = useRef<ScrambleRound[]>([]);
   const roundRef = useRef(0);
-  const placedRef = useRef<number[]>([]);
+  const slotsRef = useRef<(number | null)[]>([]);
   const livesRef = useRef(LIVES);
   const resultsRef = useRef<boolean[]>([]);
   const elapsedRef = useRef(0);
@@ -157,9 +175,16 @@ export function ScrambleGame() {
     setPhase(p);
   }
 
-  function setPlacedSafe(next: number[]) {
-    placedRef.current = next;
-    setPlaced(next);
+  function setSlotsSafe(next: (number | null)[]) {
+    slotsRef.current = next;
+    setSlots(next);
+  }
+
+  /** Fresh slots for a round: all empty, with the anchor letter locked in. */
+  function initSlots(r: ScrambleRound): (number | null)[] {
+    const next: (number | null)[] = Array(r.word.length).fill(null);
+    if (r.anchorSlot >= 0) next[r.anchorSlot] = r.anchorTile;
+    return next;
   }
 
   function finish(didSurvive: boolean) {
@@ -196,7 +221,7 @@ export function ScrambleGame() {
     elapsedRef.current += Math.max(0, budget - timer.remaining());
     timer.stop();
     resultsRef.current.push(solved);
-    if (!solved) livesRef.current -= 1;
+    if (!solved && !UNLIMITED_LIVES) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: solved, msg });
     setPhaseSafe("gap");
@@ -223,44 +248,62 @@ export function ScrambleGame() {
 
   function beginRound() {
     const r = roundsRef.current[roundRef.current];
-    setPlacedSafe([]);
+    setSlotsSafe(initSlots(r));
     sfx.reveal();
     setPhaseSafe("play");
-    timer.start(r.duration, () => endRound(false, `TIME! — ${r.word}`));
+    // On a timeout the answer gets spelled out in the slots (see render), so
+    // the message just names the miss rather than repeating the word.
+    timer.start(r.duration, () => endRound(false, "TIME'S UP!"));
   }
 
   /** Called whenever the answer row changes; auto-submits when full. */
-  function checkComplete(next: number[]) {
+  function checkComplete(next: (number | null)[]) {
     const r = roundsRef.current[roundRef.current];
-    if (next.length < r.word.length) return;
-    const spelled = next.map((i) => r.tiles[i]).join("");
+    if (next.some((s) => s === null)) return; // not full yet
+    const spelled = next.map((s) => r.tiles[s as number]).join("");
     if (spelled === r.word) {
       endRound(true, "SOLVED ✓");
     } else {
-      // Wrong word: shake, shave time, clear the row — but keep the life.
+      // Wrong word: shake, shave time, clear the row — but keep the life (and
+      // the locked anchor).
       sfx.error();
       setShakeKey((k) => k + 1);
       timer.shave(WRONG_PENALTY);
-      setPlacedSafe([]);
+      setSlotsSafe(initSlots(r));
     }
   }
 
   function placeTile(i: number) {
     if (phaseRef.current !== "play" || lockedRef.current) return;
-    const r = roundsRef.current[roundRef.current];
-    if (placedRef.current.includes(i)) return;
-    if (placedRef.current.length >= r.word.length) return;
+    if (slotsRef.current.includes(i)) return; // tile already placed
+    const slot = slotsRef.current.findIndex((s) => s === null);
+    if (slot < 0) return; // row full
     sfx.tap();
-    const next = [...placedRef.current, i];
-    setPlacedSafe(next);
+    const next = [...slotsRef.current];
+    next[slot] = i;
+    setSlotsSafe(next);
     checkComplete(next);
   }
 
   function removeAt(slot: number) {
     if (phaseRef.current !== "play" || lockedRef.current) return;
+    const r = roundsRef.current[roundRef.current];
+    if (slot === r.anchorSlot || slotsRef.current[slot] === null) return;
     sfx.tap();
-    const next = placedRef.current.filter((_, idx) => idx !== slot);
-    setPlacedSafe(next);
+    const next = [...slotsRef.current];
+    next[slot] = null;
+    setSlotsSafe(next);
+  }
+
+  /** Backspace: clear the last filled (non-anchor) slot. */
+  function removeLast() {
+    const r = roundsRef.current[roundRef.current];
+    for (let s = slotsRef.current.length - 1; s >= 0; s--) {
+      if (s !== r.anchorSlot && slotsRef.current[s] !== null) {
+        removeAt(s);
+        return;
+      }
+    }
   }
 
   function typeLetter(ch: string) {
@@ -268,7 +311,7 @@ export function ScrambleGame() {
     const r = roundsRef.current[roundRef.current];
     // Consume the first unused tile matching the typed letter.
     const i = r.tiles.findIndex(
-      (t, idx) => t === ch && !placedRef.current.includes(idx)
+      (t, idx) => t === ch && !slotsRef.current.includes(idx)
     );
     if (i >= 0) placeTile(i);
   }
@@ -287,7 +330,7 @@ export function ScrambleGame() {
     setMode(m);
     setLives(LIVES);
     setRound(0);
-    setPlacedSafe([]);
+    setSlotsSafe([]);
     setGap(null);
     setNewBest(false);
     setSurvived(false);
@@ -299,7 +342,7 @@ export function ScrambleGame() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Backspace") {
         e.preventDefault();
-        if (placedRef.current.length > 0) removeAt(placedRef.current.length - 1);
+        removeLast();
       } else if (/^[a-zA-Z]$/.test(e.key)) {
         typeLetter(e.key.toUpperCase());
       }
@@ -319,7 +362,7 @@ export function ScrambleGame() {
         tagline="Unscramble the word. Ignore the junk."
         howTo={[
           "Tap the letter tiles to spell the hidden word before the clock runs out.",
-          "Decoy letters are mixed into the pile — and the hint disappears once it gets hard.",
+          "Decoys hide in the pile. When the hint's gone, one correct letter is locked in green to start you off.",
         ]}
         controlsHint="Tap the tiles · type on desktop · backspace to undo"
         onStart={startRun}
@@ -376,38 +419,54 @@ export function ScrambleGame() {
         )}
       </p>
 
-      {/* Answer slots */}
+      {/* Answer slots. On a timeout we spell the missed word straight into the
+          slots (coral) so the player sees the answer where they were building
+          it, instead of reading it off a line of text. */}
       <div
         key={shakeKey}
         className={`${shakeKey > 0 ? "animate-shake" : ""} flex flex-wrap justify-center gap-1.5`}
       >
         {Array.from({ length: wordLen }, (_, slot) => {
-          const tileIdx = placed[slot];
-          const filled = tileIdx !== undefined;
+          const revealing = phase === "gap" && gap !== null && !gap.ok;
+          const isAnchor = r.anchorSlot === slot;
+          const tileIdx = slots[slot];
+          const filled = tileIdx != null;
+          const letter = revealing
+            ? r.word[slot]
+            : tileIdx != null
+              ? r.tiles[tileIdx]
+              : "";
           return (
             <button
               key={slot}
               type="button"
-              onPointerDown={() => filled && removeAt(slot)}
-              disabled={phase !== "play"}
+              onPointerDown={() => filled && !isAnchor && removeAt(slot)}
+              disabled={phase !== "play" || isAnchor}
               className={`flex h-12 w-10 items-center justify-center rounded-lg border-2 font-display text-2xl sm:h-14 sm:w-12 ${
-                gap?.ok
-                  ? "border-mint bg-panel2 text-mint"
-                  : filled
-                    ? "border-lemon bg-panel2 text-paper"
-                    : "border-line bg-panel"
+                isAnchor
+                  ? // The free letter — locked in its right spot, always green.
+                    "border-mint bg-mint/15 text-mint"
+                  : revealing
+                    ? "border-coral bg-panel2 text-coral"
+                    : gap?.ok
+                      ? "border-mint bg-panel2 text-mint"
+                      : filled
+                        ? "border-lemon bg-panel2 text-paper"
+                        : "border-line bg-panel"
               }`}
             >
-              {filled ? r.tiles[tileIdx] : ""}
+              {letter}
             </button>
           );
         })}
       </div>
 
-      {/* Letter pile */}
-      <div className="flex flex-wrap justify-center gap-2 rounded-2xl border-2 border-line bg-panel p-4 shadow-chunk">
+      {/* Letter pile — always visible; you need to see the scramble to solve
+          it. On a round end the verdict is dropped right on top of it, where
+          your eyes already are. */}
+      <div className="relative flex flex-wrap justify-center gap-2 rounded-2xl border-2 border-line bg-panel p-4 shadow-chunk">
         {r?.tiles.map((ch, i) => {
-          const used = placed.includes(i);
+          const used = slots.includes(i);
           return (
             <button
               key={i}
@@ -424,17 +483,21 @@ export function ScrambleGame() {
             </button>
           );
         })}
-      </div>
 
-      {phase === "gap" && gap && (
-        <p
-          className={`animate-pop text-center font-display text-xl ${
-            gap.ok ? "text-mint" : "text-coral"
-          }`}
-        >
-          {gap.msg}
-        </p>
-      )}
+        {phase === "gap" && gap && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <p
+              className={`animate-pop rounded-xl border-2 px-5 py-2.5 font-display text-xl backdrop-blur ${
+                gap.ok
+                  ? "border-mint bg-ink/80 text-mint"
+                  : "border-coral bg-ink/80 text-coral"
+              }`}
+            >
+              {gap.msg}
+            </p>
+          </div>
+        )}
+      </div>
 
       <p className="text-center font-pixel text-base text-fog">
         tap a slot to send a letter back · some tiles are junk

@@ -7,6 +7,7 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { haptics } from "@/lib/haptics";
 import { useKeyboardFit } from "@/lib/hooks";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -23,6 +24,18 @@ import {
 const PROMPTS = 20;
 const LIVES = 3;
 const SURVIVAL_CAP = 150;
+
+/**
+ * Swap "smart" typography for keys a player actually has — em/en dashes,
+ * curly quotes, and ellipsis are unfair to demand in a typing game.
+ */
+function typeable(s: string): string {
+  return s
+    .replace(/[—–]/g, "-") // em/en dash → hyphen
+    .replace(/[“”]/g, '"') // curly double quotes → straight
+    .replace(/[‘’]/g, "'") // curly single quotes → straight
+    .replace(/…/g, "..."); // ellipsis → three dots
+}
 
 /**
  * 20 prompts escalating from single short words to full punctuated phrases.
@@ -51,7 +64,7 @@ function generatePrompts(rng: Rng, total: number): string[] {
           : `${pick(rng, SHORT_WORDS)} ${pick(rng, MEDIUM_WORDS)}`
     );
   }
-  return prompts;
+  return prompts.map(typeable);
 }
 
 /**
@@ -65,7 +78,7 @@ function promptDuration(index: number, text: string): number {
   return 1.2 + text.length * perChar;
 }
 
-type Phase = "intro" | "typing" | "result";
+type Phase = "intro" | "typing" | "miss" | "result";
 
 export function TypingGame() {
   const [phase, setPhase] = useState<Phase>("intro");
@@ -95,6 +108,7 @@ export function TypingGame() {
   const modeRef = useRef<Mode>("daily");
   const totalRef = useRef(PROMPTS);
   const inputRef = useRef<HTMLInputElement>(null);
+  const missTimeoutRef = useRef(0);
   const timer = useCountdown();
 
   function accuracy(): number {
@@ -135,22 +149,28 @@ export function TypingGame() {
     indexRef.current = idx;
     setIndex(idx);
     setValue("");
+    setPhase("typing");
     sfx.reveal();
     const text = promptsRef.current[idx];
     timer.start(promptDuration(idx, text), () => {
       // Clock beat the fingers.
       resultsRef.current.push(false);
-      livesRef.current -= 1;
+      if (!UNLIMITED_LIVES) livesRef.current -= 1;
       setLives(livesRef.current);
       sfx.error();
       haptics.fail();
-      if (livesRef.current <= 0) {
-        finish(false);
-      } else if (idx + 1 >= totalRef.current) {
-        finish(true);
-      } else {
-        nextPrompt(idx + 1);
-      }
+      // A short beat on the miss: the next prompt doesn't snap in under your
+      // fingers, so keystrokes still finishing the old word don't corrupt it.
+      setPhase("miss");
+      missTimeoutRef.current = window.setTimeout(() => {
+        if (livesRef.current <= 0) {
+          finish(false);
+        } else if (idx + 1 >= totalRef.current) {
+          finish(true);
+        } else {
+          nextPrompt(idx + 1);
+        }
+      }, 1200);
     });
     inputRef.current?.focus();
   }
@@ -216,8 +236,12 @@ export function TypingGame() {
     if (phase === "typing") inputRef.current?.focus();
   }, [phase, index]);
 
-  // …and keep the phone's keyboard from shoving the title and timer offscreen.
-  useKeyboardFit(phase === "typing");
+  // …and keep the phone's keyboard from shoving the title and timer offscreen
+  // (held through the brief miss beat so the layout doesn't jump).
+  useKeyboardFit(phase === "typing" || phase === "miss");
+
+  // Clean up the miss-grace timeout if the player leaves mid-beat.
+  useEffect(() => () => window.clearTimeout(missTimeoutRef.current), []);
 
   if (phase === "intro") {
     return (
@@ -286,6 +310,11 @@ export function TypingGame() {
           errKey > 0 ? "animate-shake" : ""
         } flex min-h-24 flex-1 items-center justify-center overflow-hidden rounded-2xl border-2 border-line bg-panel p-4 shadow-chunk sm:min-h-36 sm:flex-none sm:p-6`}
       >
+        {phase === "miss" ? (
+          <p className="animate-pop text-center font-display text-3xl text-coral">
+            TIME&apos;S UP!
+          </p>
+        ) : (
         <p className="text-center font-mono text-2xl leading-relaxed tracking-wide break-words">
           {target.split("").map((ch, i) => {
             const typed = i < value.length;
@@ -316,6 +345,7 @@ export function TypingGame() {
             </span>
           )}
         </p>
+        )}
       </div>
 
       <input

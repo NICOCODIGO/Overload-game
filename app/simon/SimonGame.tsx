@@ -7,6 +7,7 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
+import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, ramp, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { derange, pick, type Rng } from "@/lib/rng";
@@ -89,7 +90,7 @@ function generateCommands(rng: Rng, total: number, survival: boolean): Command[]
 
 function commandText(cmd: Command): string {
   if (cmd.kind === "wait") return "GET READY TO TAP…";
-  if (cmd.kind === "label") return `TAP THE WORD “${cmd.target.toUpperCase()}”`;
+  if (cmd.kind === "label") return `TAP THE WORD ${cmd.target.toUpperCase()}`;
   return `TAP THE ${cmd.target.toUpperCase()} BUTTON`;
 }
 
@@ -154,7 +155,7 @@ export function SimonGame() {
     lockedRef.current = true;
     timer.stop();
     resultsRef.current.push(passed);
-    if (!passed) livesRef.current -= 1;
+    if (!passed && !UNLIMITED_LIVES) livesRef.current -= 1;
     setLives(livesRef.current);
     setFeedback({ ok: passed, msg });
     setPhase("feedback");
@@ -261,7 +262,7 @@ export function SimonGame() {
         tagline="Obedience training for your reflexes."
         howTo={[
           "Only obey a card stamped SIMON SAYS — otherwise freeze and let the clock run out.",
-          "From round 5 the button labels lie: check if the card wants the COLOR or the WORD.",
+          "Look very carefully, the WORDS and COLORS buttons on the card can lie to you.",
         ]}
         controlsHint="Tap the buttons · keys 1–4 on desktop"
         onStart={startRun}
