@@ -252,7 +252,10 @@ export function BlinkGame() {
         }
       },
       // Longer on a reveal so the before/after animation cycles a few times.
-      reveal ? 2000 : 700
+      // Kept a clean multiple of the 550ms flip interval below — otherwise the
+      // window closes mid-flip, cutting off the 300ms transition and hiding the
+      // very change this is meant to teach.
+      reveal ? 2750 : 700
     );
   }
 

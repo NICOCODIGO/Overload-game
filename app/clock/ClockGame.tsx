@@ -178,8 +178,11 @@ function generateRounds(rng: Rng, total: number, survival: boolean): ClockRound[
 }
 
 // Preview timing for flash rounds: spin-in, then a frozen peek, then gone.
+// Only the peek is readable — the hands are a blur while they spin — so it has
+// to fit reading hour + minute AND committing them to memory. Much under a
+// second and the round tests reaction speed instead of recall.
 const SPIN_MS = 1300;
-const PEEK_MS = 900;
+const PEEK_MS = 1400;
 
 type Phase = "intro" | "preview" | "answer" | "feedback" | "result";
 

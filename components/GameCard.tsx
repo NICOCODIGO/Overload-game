@@ -64,7 +64,7 @@ export function GameCard(props: GameCardProps) {
               perfect ? "text-lemon" : "text-mint"
             }`}
           >
-            {perfect ? t.perfect : t.doneLabel} {today.display}
+            {perfect ? t.perfect : t.doneLabel}
           </span>
         </span>
       ) : (

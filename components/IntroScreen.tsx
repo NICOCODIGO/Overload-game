@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import type { GameId, Mode } from "@/lib/daily";
-import { dailyNumber } from "@/lib/daily";
 import { getBest } from "@/lib/storage";
 import { useClientValue } from "@/lib/hooks";
 import { unlockAudio } from "@/lib/audio";
@@ -25,7 +24,6 @@ interface IntroScreenProps {
  */
 export function IntroScreen(props: IntroScreenProps) {
   const t = useT();
-  const num = useClientValue(dailyNumber, 0);
   const bestDaily = useClientValue(() => getBest(props.game, "daily"), null);
   const bestSurvival = useClientValue(
     () => getBest(props.game, "survival"),
@@ -121,7 +119,7 @@ export function IntroScreen(props: IntroScreenProps) {
           onClick={() => start("daily")}
           className="rounded-xl border-2 border-black/40 bg-lemon px-6 py-3 font-display text-lg text-ink shadow-chunk transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none sm:py-4"
         >
-          {t.daily} #{num || "…"}
+          {t.daily}
         </button>
         <button
           type="button"
