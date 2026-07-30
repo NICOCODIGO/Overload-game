@@ -12,7 +12,7 @@ import { haptics } from "@/lib/haptics";
 import { useKeyboardFit } from "@/lib/hooks";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
-import { pick, shuffle, type Rng } from "@/lib/rng";
+import { shuffle, type Rng } from "@/lib/rng";
 import { MEDIUM_WORDS, PHRASES, SHORT_WORDS } from "@/lib/words";
 import {
   bumpStreak,
@@ -39,29 +39,37 @@ function typeable(s: string): string {
 
 /**
  * 20 prompts escalating from single short words to full punctuated phrases.
- * Pools are shuffled (not sampled) so a daily run never repeats a prompt.
+ * Pools are shuffled (not sampled) so a run never repeats a prompt.
  */
 function generatePrompts(rng: Rng, total: number): string[] {
   const short = shuffle(rng, SHORT_WORDS);
   const medium = shuffle(rng, MEDIUM_WORDS);
-  const phrases = shuffle(rng, PHRASES)
-    .slice(0, 8)
-    .sort((a, b) => a.length - b.length);
+  const phrases = shuffle(rng, PHRASES);
   const prompts = [
     ...short.slice(0, 6), // 1–6: quick single words
     ...medium.slice(0, 4), // 7–10: longer words
     ...[0, 1].map((i) => `${short[6 + i]} ${medium[4 + i]}`), // 11–12: pairs
-    ...phrases, // 13–20: phrases, shortest first
+    // 13–20: phrases, shortest first
+    ...phrases.slice(0, 8).sort((a, b) => a.length - b.length),
   ];
-  // Survival: keep cycling word → phrase → pair forever, timers shrinking.
+  // Unlimited: keep cycling word → phrase → pair forever, timers shrinking.
+  // Cursors pick up past what the opening 20 already consumed and walk the
+  // shuffled pools in order, so a run works through the whole pool before
+  // repeating anything. Sampling with `pick` served duplicate phrases within
+  // the first handful of prompts no matter how large the pool got.
+  const at = (pool: readonly string[], cursor: number) =>
+    pool[cursor % pool.length];
+  let si = 8;
+  let mi = 6;
+  let pi = 8;
   for (let i = prompts.length; i < total; i++) {
     const cyc = i % 3;
     prompts.push(
       cyc === 0
-        ? pick(rng, MEDIUM_WORDS)
+        ? at(medium, mi++)
         : cyc === 1
-          ? pick(rng, PHRASES)
-          : `${pick(rng, SHORT_WORDS)} ${pick(rng, MEDIUM_WORDS)}`
+          ? at(phrases, pi++)
+          : `${at(short, si++)} ${at(medium, mi++)}`
     );
   }
   return prompts.map(typeable);
