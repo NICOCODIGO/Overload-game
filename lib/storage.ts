@@ -43,6 +43,11 @@ export interface BestScore {
 export function getBest(game: GameId, mode: Mode): BestScore | null {
   const best = get<BestScore | null>(`best:${game}:${mode}`, null);
   if (!best) return null;
+  // A daily best is *today's* best. Every day is a different puzzle, so an
+  // all-time daily record compares scores on puzzles that never coexisted —
+  // and an easy day's 20/20 would sit there unbeatable forever. Unlimited
+  // keeps its lifetime record; chasing one is the whole point of that mode.
+  if (mode === "daily" && best.date !== todayUTC()) return null;
   // Strip any legacy tiebreak suffix ("Level 15 · 48.8s" → "Level 15") so
   // bests stored before the metric was dropped still display cleanly.
   return { ...best, display: best.display.split(" · ")[0] };

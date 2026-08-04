@@ -11,6 +11,7 @@ import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, type Rng } from "@/lib/rng";
+import { useT } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -65,6 +66,8 @@ interface Gap {
 }
 
 export function SequenceGame() {
+  const t = useT();
+  const g = t.games.sequence;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [level, setLevel] = useState(1);
@@ -110,9 +113,15 @@ export function SequenceGame() {
   function ensureSeq(lvl: number): Dir[] {
     while (seqsRef.current.length < lvl) {
       const len = seqLength(seqsRef.current.length + 1);
-      seqsRef.current.push(
-        Array.from({ length: len }, () => pick(rngRef.current!, DIRS))
-      );
+      const draw = () =>
+        Array.from({ length: len }, () => pick(rngRef.current!, DIRS));
+      // Levels come in same-length pairs, so two in a row can roll the exact
+      // same code — at length 3 that's a 1-in-64 shot, and it reads as the
+      // game glitching rather than as a new transmission.
+      const prev = seqsRef.current[seqsRef.current.length - 1]?.join("");
+      let code = draw();
+      for (let t = 0; t < 8 && code.join("") === prev; t++) code = draw();
+      seqsRef.current.push(code);
     }
     return seqsRef.current[lvl - 1];
   }
@@ -124,7 +133,7 @@ export function SequenceGame() {
     const time = elapsedRef.current;
     const emojis = attemptsRef.current.map((a) => (a ? "✅" : "❌"));
     // Time still breaks ties internally, but the shown score stays clean.
-    const display = `Level ${score}`;
+    const display = g.unit(score);
     const isBest = submitBest("sequence", modeRef.current, {
       score,
       tiebreak: time,
@@ -161,7 +170,7 @@ export function SequenceGame() {
         finish(false);
         return;
       }
-      setGap({ ok: false, msg: "CHANNEL CLOSED — RETRY" });
+      setGap({ ok: false, msg: t.fb.channelClosed });
       setPhaseSafe("gap");
       timeoutRef.current = window.setTimeout(
         () => startLevel(levelRef.current),
@@ -211,7 +220,7 @@ export function SequenceGame() {
           finish(true);
           return;
         }
-        setGap({ ok: true, msg: "SIGNAL SENT ✓" });
+        setGap({ ok: true, msg: t.fb.signalSent });
         setPhaseSafe("gap");
         timeoutRef.current = window.setTimeout(
           () => startLevel(levelRef.current + 1),
@@ -285,34 +294,28 @@ export function SequenceGame() {
   };
 
   if (phase === "intro") {
+    // Both modes score as a level reached, so the score line ignores mode.
     return (
       <IntroScreen
         game="sequence"
-        title="SIGNAL RUSH"
-        tagline="Crack the intercepted code before the channel closes."
-        howTo={[
-          "Key in the arrow code, in order, before the channel closes.",
-          "Deep transmissions flash once then go dark — re-key them from memory. A wrong key resets the code.",
-        ]}
-        controlsHint="Arrow keys / WASD · swipe or d-pad on touch"
+        format={(score) => g.unit(score)}
         onStart={startRun}
       />
     );
   }
 
   if (phase === "result") {
+    const best = getBest("sequence", mode);
     return (
       <ResultScreen
         game="sequence"
-        gameName="Signal Rush"
-        path="/sequence"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={`Level ${summary.cleared}`}
+        scoreLine={g.unit(summary.cleared)}
+        bestDisplay={best ? g.unit(best.score) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("sequence", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -323,11 +326,11 @@ export function SequenceGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
-      <GameTitle game="sequence" title="SIGNAL RUSH" />
+      <GameTitle game="sequence" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          TRANSMISSION {level}
+          {g.counter} {level}
           {mode === "daily" ? `/${DAILY_LEVELS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -362,7 +365,7 @@ export function SequenceGame() {
           <>
             {phase === "preview" && (
               <p className="font-display text-xs text-lemon">
-                ⚡ MEMORIZE — SIGNAL GOES DARK
+                {t.play.memorizeSignal}
               </p>
             )}
             {/* One row, always. The arrow size scales to how many there are
@@ -399,7 +402,7 @@ export function SequenceGame() {
             </div>
             {phase === "input" && (
               <p className="text-xs text-fog">
-                {hidden ? "from memory — you've got this" : "swipe or use keys"}
+                {hidden ? t.play.fromMemory : t.play.swipeOrKeys}
               </p>
             )}
           </>
@@ -410,26 +413,34 @@ export function SequenceGame() {
           tightened back up at sm+, where the keyboard does the real work. */}
       <div className="mx-auto grid w-60 grid-cols-3 gap-3 sm:w-48 sm:gap-2">
         <span />
-        <DPadButton dir="up" onDir={handleDir} />
+        <DPadButton dir="up" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.up)} />
         <span />
-        <DPadButton dir="left" onDir={handleDir} />
+        <DPadButton dir="left" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.left)} />
         <span className="flex items-center justify-center text-xs text-line">
           ✦
         </span>
-        <DPadButton dir="right" onDir={handleDir} />
+        <DPadButton dir="right" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.right)} />
         <span />
-        <DPadButton dir="down" onDir={handleDir} />
+        <DPadButton dir="down" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.down)} />
         <span />
       </div>
     </div>
   );
 }
 
-function DPadButton({ dir, onDir }: { dir: Dir; onDir: (d: Dir) => void }) {
+function DPadButton({
+  dir,
+  onDir,
+  label,
+}: {
+  dir: Dir;
+  onDir: (d: Dir) => void;
+  label: string;
+}) {
   return (
     <button
       type="button"
-      aria-label={`input ${dir}`}
+      aria-label={label}
       onPointerDown={(e) => {
         e.preventDefault();
         onDir(dir);

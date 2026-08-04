@@ -10,7 +10,8 @@ import { sfx } from "@/lib/audio";
 import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
-import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
+import { distinctRounds, pick, randInt, shuffle, type Rng } from "@/lib/rng";
+import { useT } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -153,28 +154,35 @@ function survivalConfig(i: number): StageConfig {
 }
 
 function generateRounds(rng: Rng, total: number, survival: boolean): ClockRound[] {
-  return Array.from({ length: total }, (_, i) => {
-    const { far, minutePool, ...cfg } = survival
-      ? survivalConfig(i)
-      : roundConfig(i);
-    // Every third mid-game round flips: match the digital time to a face.
-    // Scanning four clocks takes longer, so flips get a bonus second.
-    // Flip rounds: match the digital time to one of four faces.
-    const reverse = !cfg.flash && i >= 5 && i % 3 === 2;
-    const hour = randInt(rng, 1, 12);
-    const minute = pick(rng, minutePool);
-    return {
-      ...cfg,
-      reverse,
-      // Flip rounds mean reading FOUR clocks instead of one — they get a
-      // real time bonus, not a token one.
-      duration: cfg.duration + (reverse ? 2.5 : 0),
-      hour,
-      minute,
-      answer: fmt(hour, minute),
-      options: buildOptions(rng, hour, minute, far, minutePool),
-    };
-  });
+  // Times were drawn independently, so a run could — and often did — ask for
+  // 9:15 twice, sometimes back to back. The early stages only allow 24 times
+  // (12 hours × o'clock/half-past), which made collisions near-certain.
+  return distinctRounds(
+    total,
+    (i) => {
+      const { far, minutePool, ...cfg } = survival
+        ? survivalConfig(i)
+        : roundConfig(i);
+      // Every third mid-game round flips: match the digital time to a face.
+      // Scanning four clocks takes longer, so flips get a bonus second.
+      // Flip rounds: match the digital time to one of four faces.
+      const reverse = !cfg.flash && i >= 5 && i % 3 === 2;
+      const hour = randInt(rng, 1, 12);
+      const minute = pick(rng, minutePool);
+      return {
+        ...cfg,
+        reverse,
+        // Flip rounds mean reading FOUR clocks instead of one — they get a
+        // real time bonus, not a token one.
+        duration: cfg.duration + (reverse ? 2.5 : 0),
+        hour,
+        minute,
+        answer: fmt(hour, minute),
+        options: buildOptions(rng, hour, minute, far, minutePool),
+      };
+    },
+    (r) => r.answer
+  );
 }
 
 // Preview timing for flash rounds: spin-in, then a frozen peek, then gone.
@@ -192,6 +200,8 @@ interface Feedback {
 }
 
 export function ClockGame() {
+  const t = useT();
+  const g = t.games.clock;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
@@ -218,13 +228,17 @@ export function ClockGame() {
   const previewTimeoutRef = useRef(0);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${ROUNDS}` : g.unit(score);
+
   function finish(didSurvive: boolean) {
     timer.stop();
     window.clearTimeout(previewTimeoutRef.current);
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display =
-      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} clocks`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("clock", modeRef.current, { score, display });
     if (modeRef.current === "daily") {
       setDailyResult("clock", dailyNumber(), {
@@ -275,7 +289,7 @@ export function ClockGame() {
     sfx.reveal();
     // Short and the same for every round — the correct answer button gets
     // highlighted on the reveal, so the message doesn't need to name it.
-    const slowMsg = "TOO SLOW!";
+    const slowMsg = t.fb.tooSlow;
     if (r.flash) {
       // Preview: watch the timelapse; the answer clock starts once it's gone.
       setPhase("preview");
@@ -294,9 +308,9 @@ export function ClockGame() {
     if (!r || lockedRef.current) return;
     sfx.tap();
     if (option === r.answer) {
-      advance(true, "NICE ✓");
+      advance(true, t.fb.nice);
     } else {
-      advance(false, "WRONG!");
+      advance(false, t.fb.wrong);
     }
   }
 
@@ -340,36 +354,21 @@ export function ClockGame() {
   useEffect(() => () => window.clearTimeout(previewTimeoutRef.current), []);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="clock"
-        title="OVERCLOCKED"
-        tagline="You learned this in second grade. Prove it."
-        howTo={[
-          "Tap the time that matches the clock — some rounds flip it and you pick the face that matches the time.",
-          "Later faces lose their numbers — and the final clocks spin, freeze, and vanish. Answer from memory.",
-        ]}
-        controlsHint="Tap an answer · keys 1–4 on desktop"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="clock" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("clock", mode);
     return (
       <ResultScreen
         game="clock"
-        gameName="Overclocked"
-        path="/clock"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} clocks`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("clock", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -381,11 +380,11 @@ export function ClockGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
-      <GameTitle game="clock" title="OVERCLOCKED" />
+      <GameTitle game="clock" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          CLOCK {round + 1}
+          {g.counter} {round + 1}
           {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -412,14 +411,14 @@ export function ClockGame() {
           </p>
         ) : r?.reverse ? (
           <div className="flex flex-col items-center justify-center gap-1">
-            <p className="font-display text-xs text-fog">MATCH THIS TIME</p>
+            <p className="font-display text-xs text-fog">{t.play.matchTime}</p>
             <p className="font-display text-5xl text-lemon">{r.answer}</p>
           </div>
         ) : (
           <>
             {phase === "preview" && (
               <p className="font-display text-xs text-lemon">
-                ⚡ MEMORIZE — IT WON&apos;T STAY
+                {t.play.memorizeClock}
               </p>
             )}
             {r && (
@@ -478,8 +477,10 @@ export function ClockGame() {
       </div>
 
       <p className="text-center text-xs text-fog">
-        short &amp; thick = <span className="text-paper">HOUR</span> · long
-        arrow = <span className="text-lemon">MINUTE</span>
+        {t.play.hands.shortIs}{" "}
+        <span className="text-paper">{t.play.hands.hour}</span>{" "}
+        {t.play.hands.longIs}{" "}
+        <span className="text-lemon">{t.play.hands.minute}</span>
       </p>
     </div>
   );
@@ -506,6 +507,7 @@ function ClockFace({
   /** Small answer-button rendering: major ticks only, chunkier digits. */
   mini?: boolean;
 }) {
+  const labels = useT().a11y;
   const hourRef = useRef<SVGGElement>(null);
   const minuteRef = useRef<SVGGElement>(null);
   const hourDeg = ((hour % 12) + minute / 60) * 30;
@@ -545,7 +547,7 @@ function ClockFace({
           : "h-52 w-52 max-w-full sm:h-72 sm:w-72"
       }
       role="img"
-      aria-label={hidden ? "hidden clock" : "analog clock"}
+      aria-label={hidden ? labels.hiddenClock : labels.analogClock}
     >
       {/* Case, bezel, dial */}
       <circle

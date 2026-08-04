@@ -1,21 +1,9 @@
 "use client";
 
-import type { GameId } from "@/lib/daily";
+import { GAMES, GAME_ORDER } from "@/lib/games";
 import { GameCard } from "./GameCard";
-import { SocialLinks } from "./SocialLinks";
+import { SiteFooter } from "./SiteFooter";
 import { useT } from "@/lib/i18n";
-
-const GAMES: { game: GameId; href: string; title: string; accent: string }[] = [
-  { game: "simon", href: "/simon", title: "SIMON SAYS", accent: "text-coral" },
-  { game: "sequence", href: "/sequence", title: "SIGNAL RUSH", accent: "text-mint" },
-  { game: "typing", href: "/typing", title: "PANIC TYPE", accent: "text-sky" },
-  { game: "clock", href: "/clock", title: "OVERCLOCKED", accent: "text-lemon" },
-  { game: "anomaly", href: "/anomaly", title: "ANOMALY", accent: "text-coral" },
-  { game: "count", href: "/count", title: "HEADCOUNT", accent: "text-mint" },
-  { game: "pattern", href: "/pattern", title: "NEXT!", accent: "text-sky" },
-  { game: "scramble", href: "/scramble", title: "SCRAMBLE", accent: "text-lemon" },
-  { game: "blink", href: "/blink", title: "BLINK", accent: "text-coral" },
-];
 
 export function ArcadeGrid() {
   const t = useT();
@@ -43,17 +31,19 @@ export function ArcadeGrid() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-3">
-        {GAMES.map((g) => (
-          <GameCard key={g.game} {...g} hook={t.hooks[g.game]} />
+        {GAME_ORDER.map((game) => (
+          <GameCard
+            key={game}
+            game={game}
+            href={GAMES[game].path}
+            title={GAMES[game].title}
+            accent={GAMES[game].accent}
+            hook={t.hooks[game]}
+          />
         ))}
       </div>
 
-      <footer className="mt-auto flex flex-col items-center gap-4 border-t-2 border-line pt-8">
-        <p className="text-center font-pixel text-base text-fog">
-          {t.footerNote}
-        </p>
-        <SocialLinks />
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

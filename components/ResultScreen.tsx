@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { GameId, Mode } from "@/lib/daily";
+import { GAMES } from "@/lib/games";
 import { buildShareText, copyToClipboard } from "@/lib/share";
 import { useT } from "@/lib/i18n";
 import { PixelIcon, type UiIcon } from "./PixelIcon";
@@ -25,18 +26,17 @@ const SHARE_EMOJI: Record<GameId, string> = {
 
 interface ResultScreenProps {
   game: GameId;
-  gameName: string;
-  path: string; // route for the share link, e.g. "/sequence"
   mode: Mode;
   dailyNum: number; // ignored in survival mode
-  /** Headline score, e.g. "Level 9 ⚡" or "24/30 🧠". */
+  /** Headline score, already in the player's language. */
   scoreLine: string;
+  /** Personal best for this mode, same formatting as scoreLine. */
+  bestDisplay: string | null;
   /** One ✅/❌ per round, in order. */
   emojis: string[];
   /** True if the run ended by finishing, false if lives ran out. */
   survived: boolean;
   newBest: boolean;
-  bestDisplay: string | null;
   streak: number;
   onPlayAgain: () => void;
 }
@@ -44,6 +44,7 @@ interface ResultScreenProps {
 /** Shared post-game screen: emoji strip, score, share-to-clipboard, replay. */
 export function ResultScreen(props: ResultScreenProps) {
   const t = useT();
+  const meta = GAMES[props.game];
   const [copied, setCopied] = useState(false);
   const bestBadgeRef = useRef<HTMLDivElement>(null);
 
@@ -60,11 +61,11 @@ export function ResultScreen(props: ResultScreenProps) {
       : props.emojis.join("");
     const ok = await copyToClipboard(
       buildShareText({
-        gameName: props.gameName,
+        gameName: meta.name,
         dailyNum: props.mode === "daily" ? props.dailyNum : null,
         scoreLine: `${props.scoreLine} ${SHARE_EMOJI[props.game]}`,
         emojis: shareEmojis,
-        path: props.path,
+        path: meta.path,
       })
     );
     setCopied(ok);
@@ -107,7 +108,7 @@ export function ResultScreen(props: ResultScreenProps) {
   return (
     <div className="animate-rise flex flex-1 flex-col items-center justify-center gap-4 py-4 text-center sm:gap-6 sm:py-10">
       {props.newBest && <Confetti originRef={bestBadgeRef} />}
-      <GameTitle game={props.game} title={props.gameName.toUpperCase()} />
+      <GameTitle game={props.game} />
 
       <h2
         className={`animate-pop font-display text-4xl leading-[0.95] sm:text-6xl ${
@@ -133,7 +134,9 @@ export function ResultScreen(props: ResultScreenProps) {
         </div>
         <div>
           {clipped && (
-            <div className="pb-0.5 text-xs text-fog">last {MAX_STRIP} shown</div>
+            <div className="pb-0.5 text-xs text-fog">
+              {t.lastShown(MAX_STRIP)}
+            </div>
           )}
           {rows.map((row, i) => (
             <div key={i} className="flex justify-center gap-0.5 py-0.5">

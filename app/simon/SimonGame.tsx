@@ -11,6 +11,7 @@ import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, ramp, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { derange, pick, type Rng } from "@/lib/rng";
+import { useT, type T } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -88,10 +89,12 @@ function generateCommands(rng: Rng, total: number, survival: boolean): Command[]
   return commands;
 }
 
-function commandText(cmd: Command): string {
-  if (cmd.kind === "wait") return "GET READY TO TAP…";
-  if (cmd.kind === "label") return `TAP THE WORD ${cmd.target.toUpperCase()}`;
-  return `TAP THE ${cmd.target.toUpperCase()} BUTTON`;
+function commandText(cmd: Command, t: T): string {
+  if (cmd.kind === "wait") return t.play.getReady;
+  const color = t.play.colors[cmd.target];
+  return cmd.kind === "label"
+    ? t.play.tapWord(color)
+    : t.play.tapButton(color);
 }
 
 type Phase = "intro" | "show" | "feedback" | "result";
@@ -102,6 +105,8 @@ interface Feedback {
 }
 
 export function SimonGame() {
+  const t = useT();
+  const g = t.games.simon;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
@@ -128,12 +133,16 @@ export function SimonGame() {
   const lockedRef = useRef(false);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${ROUNDS}` : g.unit(score);
+
   function finish(didSurvive: boolean) {
     timer.stop();
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display =
-      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} rounds`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("simon", modeRef.current, { score, display });
     if (modeRef.current === "daily") {
       setDailyResult("simon", dailyNumber(), {
@@ -182,11 +191,11 @@ export function SimonGame() {
     if (!cmd || lockedRef.current) return;
     sfx.tap();
     if (cmd.kind === "wait") {
-      advance(false, "IT SAID GET READY — NEVER TAP!");
+      advance(false, t.fb.neverTap);
       return;
     }
     if (!cmd.simonSays) {
-      advance(false, "SIMON DIDN'T SAY!");
+      advance(false, t.fb.didntSay);
       return;
     }
     const correct =
@@ -194,12 +203,9 @@ export function SimonGame() {
         ? COLORS[buttonIndex] === cmd.target
         : cmd.labels[buttonIndex] === cmd.target;
     if (correct) {
-      advance(true, "NICE ✓");
+      advance(true, t.fb.nice);
     } else {
-      advance(
-        false,
-        cmd.kind === "label" ? "THE WORD, NOT THE COLOR!" : "WRONG BUTTON!"
-      );
+      advance(false, cmd.kind === "label" ? t.fb.wordNotColor : t.fb.wrongButton);
     }
   }
 
@@ -231,12 +237,9 @@ export function SimonGame() {
       // Timer expiry is CORRECT when the move was to do nothing.
       const shouldHold = !cmd.simonSays || cmd.kind === "wait";
       if (shouldHold) {
-        advance(
-          true,
-          cmd.kind === "wait" ? "PATIENCE PAYS ✓" : "SIMON DIDN'T SAY ✓"
-        );
+        advance(true, cmd.kind === "wait" ? t.fb.patience : t.fb.didntSayOk);
       } else {
-        advance(false, "TOO SLOW!");
+        advance(false, t.fb.tooSlow);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,36 +258,21 @@ export function SimonGame() {
   }, [phase]);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="simon"
-        title="SIMON SAYS"
-        tagline="Obedience training for your reflexes."
-        howTo={[
-          "Only obey a card stamped SIMON SAYS — otherwise freeze and let the clock run out.",
-          "Look very carefully, the WORDS and COLORS buttons on the card can lie to you.",
-        ]}
-        controlsHint="Tap the buttons · keys 1–4 on desktop"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="simon" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("simon", mode);
     return (
       <ResultScreen
         game="simon"
-        gameName="Simon Says"
-        path="/simon"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} rounds`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("simon", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -295,11 +283,11 @@ export function SimonGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
-      <GameTitle game="simon" title="SIMON SAYS" />
+      <GameTitle game="simon" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          ROUND {round + 1}
+          {g.counter} {round + 1}
           {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -322,11 +310,11 @@ export function SimonGame() {
             <>
               {cmd.simonSays && (
                 <span className="animate-stamp mb-2 inline-block rounded border-2 border-lemon px-3 py-1 font-display text-sm text-lemon">
-                  SIMON SAYS
+                  {t.play.simonSays}
                 </span>
               )}
               <p className="font-display text-2xl leading-snug" key={round}>
-                {commandText(cmd)}
+                {commandText(cmd, t)}
               </p>
             </>
           )
@@ -335,27 +323,30 @@ export function SimonGame() {
 
       {/* The four buttons */}
       <div className="grid grid-cols-2 gap-3">
-        {COLORS.map((color, i) => (
-          <button
-            key={color}
-            type="button"
-            disabled={phase !== "show"}
-            onPointerDown={() => phase === "show" && handleTap(i)}
-            className={`${BUTTON_BG[color]} h-20 rounded-2xl border-2 border-black/40 font-display text-2xl shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-60 sm:h-28 ${
-              color === "yellow" || color === "green"
-                ? "text-ink"
-                : "text-white"
-            }`}
-            aria-label={`${color} button labeled ${cmd?.labels[i] ?? color}`}
-          >
-            {(cmd?.labels[i] ?? color).toUpperCase()}
-          </button>
-        ))}
+        {COLORS.map((color, i) => {
+          // The printed word is the Stroop trap, so it has to be translated
+          // alongside the command — otherwise the lie stops reading as a lie.
+          const label = t.play.colors[cmd?.labels[i] ?? color];
+          return (
+            <button
+              key={color}
+              type="button"
+              disabled={phase !== "show"}
+              onPointerDown={() => phase === "show" && handleTap(i)}
+              className={`${BUTTON_BG[color]} h-20 rounded-2xl border-2 border-black/40 font-display text-2xl shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-60 sm:h-28 ${
+                color === "yellow" || color === "green"
+                  ? "text-ink"
+                  : "text-white"
+              }`}
+              aria-label={t.play.buttonAria(t.play.colors[color], label)}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
-      <p className="text-center text-xs text-fog">
-        No stamp? Don&apos;t touch anything.
-      </p>
+      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }

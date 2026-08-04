@@ -1,4 +1,5 @@
 import type { GameId } from "@/lib/daily";
+import { GAMES } from "@/lib/games";
 import { PixelIcon } from "./PixelIcon";
 
 /**
@@ -8,13 +9,12 @@ import { PixelIcon } from "./PixelIcon";
  */
 export function GameTitle({
   game,
-  title,
   compact = false,
 }: {
   game: GameId;
-  title: string;
   compact?: boolean;
 }) {
+  const title = GAMES[game].title;
   if (compact) {
     return (
       <div className="flex items-center justify-center gap-2">

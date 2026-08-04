@@ -10,7 +10,8 @@ import { sfx } from "@/lib/audio";
 import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
-import { pick, randInt, type Rng } from "@/lib/rng";
+import { distinctRounds, pick, randInt, type Rng } from "@/lib/rng";
+import { useT } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -133,7 +134,17 @@ function generateRound(rng: Rng, i: number): BlinkRound {
 }
 
 function generateRounds(rng: Rng, total: number): BlinkRound[] {
-  return Array.from({ length: total }, (_, i) => generateRound(rng, i));
+  // Keyed on the change itself, not the scene: spotting "the coral square
+  // became a diamond" twice in one run is the repeat players notice, however
+  // different the crowd around it looks.
+  return distinctRounds(
+    total,
+    (i) => generateRound(rng, i),
+    (r) => {
+      const before = r.items[r.changedIdx];
+      return `${r.change}|${before.glyph}>${r.altGlyph}|${before.colorIdx}>${r.altColorIdx}`;
+    }
+  );
 }
 
 // Flicker rhythm: frame, blank, altered frame, blank, repeat.
@@ -155,6 +166,8 @@ interface Gap {
 }
 
 export function BlinkGame() {
+  const t = useT();
+  const g = t.games.blink;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
@@ -189,6 +202,11 @@ export function BlinkGame() {
   const gapTimeoutRef = useRef(0);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${ROUNDS}` : g.unit(score);
+
   function setPhaseSafe(p: Phase) {
     phaseRef.current = p;
     setPhase(p);
@@ -201,8 +219,7 @@ export function BlinkGame() {
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
     // Time still breaks ties internally, but the shown score stays clean.
-    const display =
-      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} spotted`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("blink", modeRef.current, {
       score,
       tiebreak: time,
@@ -264,16 +281,14 @@ export function BlinkGame() {
     sfx.reveal();
     setFrame("a");
     setPhaseSafe("scan");
-    timer.start(r.duration, () =>
-      endRound(false, "MISSED IT — RINGED", true)
-    );
+    timer.start(r.duration, () => endRound(false, t.fb.missedIt, true));
   }
 
   function handleTap(idx: number) {
     if (lockedRef.current || phaseRef.current !== "scan") return;
     const r = roundsRef.current[roundRef.current];
     if (idx === r.changedIdx) {
-      endRound(true, "GOT IT ✓", false);
+      endRound(true, t.fb.gotIt, false);
     } else {
       sfx.error();
       setShakeKey((k) => k + 1);
@@ -327,36 +342,21 @@ export function BlinkGame() {
   useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="blink"
-        title="BLINK"
-        tagline="Something changed. You almost saw it."
-        howTo={[
-          "The scene flashes, blinks, and flashes again — one thing is different between flashes. Tap it.",
-          "Wrong taps burn time. Colors change loudly at first, then the changes get sneakier.",
-        ]}
-        controlsHint="Tap the thing that changes — on either flash"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="blink" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("blink", mode);
     return (
       <ResultScreen
         game="blink"
-        gameName="Blink"
-        path="/blink"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} spotted`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("blink", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -381,11 +381,11 @@ export function BlinkGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
-      <GameTitle game="blink" title="BLINK" />
+      <GameTitle game="blink" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          SCENE {round + 1}
+          {g.counter} {round + 1}
           {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -414,7 +414,7 @@ export function BlinkGame() {
                 key={i}
                 type="button"
                 tabIndex={-1}
-                aria-label={isChanged ? "the thing that changes" : undefined}
+                aria-label={isChanged ? t.a11y.theChange : undefined}
                 onPointerDown={() => handleTap(i)}
                 className={`absolute select-none leading-none ${
                   blank ? "opacity-0" : ""
@@ -464,9 +464,7 @@ export function BlinkGame() {
         )}
       </div>
 
-      <p className="text-center text-xs text-fog">
-        the blink is doing this — your eyes need the cut to hide the change
-      </p>
+      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }
