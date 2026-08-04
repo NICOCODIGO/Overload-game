@@ -10,7 +10,8 @@ import { sfx } from "@/lib/audio";
 import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
-import { pick, randInt, type Rng } from "@/lib/rng";
+import { makeBag, pick, randInt, type Rng } from "@/lib/rng";
+import { useT } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -48,7 +49,9 @@ const PALETTE = [
   "var(--color-lemon)",
 ];
 
-// Emoji crowds: [crowd, target] — visually related, not identical.
+// Emoji crowds: [crowd, target] — visually related, not identical. Kept to
+// single-codepoint emoji (no skin tones, no variation selectors) so every
+// platform renders the same silhouette.
 const EMOJI_PAIRS: [string, string][] = [
   ["🐶", "🐱"],
   ["🌝", "🌚"],
@@ -56,9 +59,26 @@ const EMOJI_PAIRS: [string, string][] = [
   ["⭐", "🌟"],
   ["🐨", "🐼"],
   ["🙂", "🙃"],
+  ["🐸", "🐢"],
+  ["🍋", "🍊"],
+  ["🐝", "🐞"],
+  ["🚗", "🚙"],
+  ["🌸", "🌺"],
+  ["🐟", "🐬"],
+  ["🍕", "🍔"],
+  ["🎈", "🎁"],
+  ["🐰", "🐭"],
+  ["🌍", "🌎"],
+  ["😀", "😃"],
+  ["🦊", "🐺"],
+  ["🍒", "🍓"],
+  ["🌙", "🌛"],
 ];
 
-// Character crowds: [crowd, target] — the near-identical twins.
+// Character crowds: [crowd, target] — the near-identical twins. Every pair has
+// to stay two *distinct* glyphs in a mono font; 0/O and 1/l are excluded
+// because some monospace faces render them near-identically, which would make
+// the round unwinnable rather than hard.
 const CHAR_PAIRS: [string, string][] = [
   ["O", "Q"],
   ["E", "F"],
@@ -66,7 +86,27 @@ const CHAR_PAIRS: [string, string][] = [
   ["Z", "2"],
   ["b", "d"],
   ["8", "B"],
+  ["p", "q"],
+  ["C", "G"],
+  ["U", "V"],
+  ["M", "W"],
+  ["h", "n"],
+  ["i", "j"],
+  ["c", "e"],
+  ["P", "R"],
+  ["K", "X"],
+  ["a", "o"],
+  ["t", "f"],
+  ["V", "Y"],
+  ["3", "8"],
+  ["u", "v"],
 ];
+
+/** Ordered crowd/target color pairs — 12 of them, so a 3-round color stage
+    never draws the same combination twice. */
+const COLOR_PAIRS: [string, string][] = PALETTE.flatMap((a) =>
+  PALETTE.filter((b) => b !== a).map((b) => [a, b] as [string, string])
+);
 
 /** Sector plan: color pop → emoji odd-one-out → conjunction → character twins. */
 function roundPlan(i: number): {
@@ -92,31 +132,35 @@ function roundPlan(i: number): {
   };
 }
 
-function generateRound(rng: Rng, i: number): SearchRound {
+/** Run-scoped decks: every stage draws its look without repeating itself. */
+interface LookBags {
+  color: () => [string, string];
+  conjunction: () => [string, string];
+  emoji: () => [string, string];
+  chars: () => [string, string];
+}
+
+function generateRound(rng: Rng, i: number, bags: LookBags): SearchRound {
   const { kind, count, duration } = roundPlan(i);
 
-  // Pick what the crowd and the anomaly look like.
+  // What the crowd and the anomaly look like, drawn without replacement.
   let crowd: { glyph: string; color?: string }[];
   let target: { glyph: string; color?: string };
   let rotate = true;
   let mono = false;
 
   if (kind === "color") {
-    const colorA = pick(rng, PALETTE);
-    let colorB = pick(rng, PALETTE);
-    while (colorB === colorA) colorB = pick(rng, PALETTE);
+    const [colorA, colorB] = bags.color();
     crowd = [{ glyph: "●", color: colorA }];
     target = { glyph: "●", color: colorB };
     rotate = false;
   } else if (kind === "shape") {
-    const [c, t] = pick(rng, EMOJI_PAIRS);
+    const [c, t] = bags.emoji();
     crowd = [{ glyph: c }];
     target = { glyph: t };
   } else if (kind === "conjunction") {
     // Crowd shares the target's color OR its shape — never both.
-    const colorA = pick(rng, PALETTE);
-    let colorB = pick(rng, PALETTE);
-    while (colorB === colorA) colorB = pick(rng, PALETTE);
+    const [colorA, colorB] = bags.conjunction();
     crowd = [
       { glyph: "●", color: colorA },
       { glyph: "■", color: colorB },
@@ -124,7 +168,7 @@ function generateRound(rng: Rng, i: number): SearchRound {
     target = { glyph: "■", color: colorA };
     rotate = false;
   } else {
-    const [c, t] = pick(rng, CHAR_PAIRS);
+    const [c, t] = bags.chars();
     crowd = [{ glyph: c, color: "var(--color-paper)" }];
     target = { glyph: t, color: "var(--color-paper)" };
     rotate = false; // rotated letters would make twins ambiguous
@@ -155,7 +199,17 @@ function generateRound(rng: Rng, i: number): SearchRound {
 }
 
 function generateRounds(rng: Rng, total: number): SearchRound[] {
-  return Array.from({ length: total }, (_, i) => generateRound(rng, i));
+  const bags: LookBags = {
+    color: makeBag(rng, COLOR_PAIRS),
+    conjunction: makeBag(rng, COLOR_PAIRS),
+    emoji: makeBag(rng, EMOJI_PAIRS),
+    chars: makeBag(rng, CHAR_PAIRS),
+  };
+  // The bags alone are enough here: each stage draws its crowd/target pair
+  // from its own deck, so a sector can't repeat until that deck is spent.
+  // A reject-and-retry pass on top would rebuild a 300-glyph field per
+  // attempt — ~100ms of stutter on an unlimited run for no extra freshness.
+  return Array.from({ length: total }, (_, i) => generateRound(rng, i, bags));
 }
 
 type Phase = "intro" | "scan" | "gap" | "result";
@@ -167,6 +221,8 @@ interface Gap {
 }
 
 export function AnomalyGame() {
+  const t = useT();
+  const g = t.games.anomaly;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
@@ -196,6 +252,11 @@ export function AnomalyGame() {
   const gapTimeoutRef = useRef(0);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${ROUNDS}` : g.unit(score);
+
   function finish(didSurvive: boolean) {
     timer.stop();
     window.clearTimeout(gapTimeoutRef.current);
@@ -203,8 +264,7 @@ export function AnomalyGame() {
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
     // Time still breaks ties internally, but the shown score stays clean.
-    const display =
-      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} found`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("anomaly", modeRef.current, {
       score,
       tiebreak: time,
@@ -264,13 +324,13 @@ export function AnomalyGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.reveal();
     setPhase("scan");
-    timer.start(r.duration, () => endRound(false, "FAILED ✗", true));
+    timer.start(r.duration, () => endRound(false, t.fb.failed, true));
   }
 
   function handleTap(cell: Cell) {
     if (lockedRef.current || phase !== "scan") return;
     if (cell.isTarget) {
-      endRound(true, "ANOMALY CONFIRMED ✓", false);
+      endRound(true, t.fb.anomalyFound, false);
     } else {
       // Wrong tap: burn time, rattle the feed.
       sfx.error();
@@ -303,36 +363,21 @@ export function AnomalyGame() {
   useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="anomaly"
-        title="ANOMALY"
-        tagline="Anomaly detection under pressure. One doesn't belong."
-        howTo={[
-          "One thing in the crowd doesn't match — find it and tap it before the feed cuts out.",
-          "Wrong taps burn a second. Later sectors hide near-identical twins.",
-        ]}
-        controlsHint="Tap the odd one out — that's it, that's the game"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="anomaly" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("anomaly", mode);
     return (
       <ResultScreen
         game="anomaly"
-        gameName="Anomaly"
-        path="/anomaly"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} found`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("anomaly", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -350,11 +395,11 @@ export function AnomalyGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
-      <GameTitle game="anomaly" title="ANOMALY" />
+      <GameTitle game="anomaly" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          SECTOR {round + 1}
+          {g.counter} {round + 1}
           {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -364,7 +409,7 @@ export function AnomalyGame() {
 
       {/* Target briefing */}
       <div className="flex items-center justify-center gap-3">
-        <span className="font-display text-xs text-fog">FIND:</span>
+        <span className="font-display text-xs text-fog">{t.play.find}</span>
         <span
           className={`rounded-lg border-2 border-lemon bg-panel px-3 py-1 text-2xl leading-none ${
             r?.mono ? "font-mono" : ""
@@ -386,7 +431,7 @@ export function AnomalyGame() {
             key={i}
             type="button"
             tabIndex={-1}
-            aria-label={cell.isTarget ? "anomaly" : undefined}
+            aria-label={cell.isTarget ? t.a11y.theAnomaly : undefined}
             onPointerDown={() => handleTap(cell)}
             className={`absolute select-none leading-none ${
               r.mono ? "font-mono font-bold" : ""
@@ -430,9 +475,7 @@ export function AnomalyGame() {
         )}
       </div>
 
-      <p className="text-center text-xs text-fog">
-        scan in rows — your eyes cheat on diagonals
-      </p>
+      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }

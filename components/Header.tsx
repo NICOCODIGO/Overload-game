@@ -4,7 +4,7 @@ import Link from "next/link";
 import { unlockAudio, toggleMuted } from "@/lib/audio";
 import { getStreak } from "@/lib/storage";
 import { useClientValue, useMuted } from "@/lib/hooks";
-import { cycleLang, useLang, useT } from "@/lib/i18n";
+import { cycleLang, useLang, useSyncHtmlLang, useT } from "@/lib/i18n";
 import { PixelIcon } from "./PixelIcon";
 
 /**
@@ -16,6 +16,9 @@ export function Header() {
   const lang = useLang();
   const t = useT();
   const streak = useClientValue(getStreak, 0);
+  // The document is prerendered as lang="en" — put the stored choice back on
+  // <html> so screen readers and hyphenation follow the player, not the build.
+  useSyncHtmlLang();
 
   return (
     <header className="sticky top-0 z-40 border-b-2 border-line bg-ink/90 backdrop-blur">

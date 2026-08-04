@@ -10,7 +10,8 @@ import { sfx } from "@/lib/audio";
 import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
-import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
+import { distinctRounds, pick, randInt, shuffle, type Rng } from "@/lib/rng";
+import { useT, type RuleSpec } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -37,9 +38,10 @@ interface Generated {
   answer: Term;
   /** Plausible wrong answers, best traps first. Deduped later. */
   wrongs: Term[];
-  /** Plain-English rule, revealed after a wrong answer so a miss teaches
-      instead of just stinging. */
-  rule: string;
+  /** The rule, as data — revealed after a wrong answer so a miss teaches
+      instead of just stinging. The sentence is written per language in
+      i18n.ts and resolved at render, so it follows the language button. */
+  rule: RuleSpec;
   /** One label per gap between terms (last one leads into the "?"), drawn
       between the boxes on a miss so the rule is *visible*, not just stated. */
   steps?: string[];
@@ -77,7 +79,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       terms,
       answer,
       wrongs,
-      rule: `the ${period} shapes repeat in a loop`,
+      rule: { k: "shapeCycle", period },
     };
   },
 
@@ -88,12 +90,13 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
     const a = down ? randInt(rng, 40, 60) : randInt(rng, 1, 12);
     const terms = [0, 1, 2, 3].map((i) => num(a + i * d));
     const ans = a + 4 * d;
+    const step = `${d > 0 ? "+" : "−"}${Math.abs(d)}`;
     return {
       terms,
       answer: num(ans),
       wrongs: [num(ans + d), num(ans - 1), num(ans + 1), num(a + 3 * d)],
-      rule: `${d > 0 ? "+" : "−"}${Math.abs(d)} each step`,
-      steps: Array(4).fill(`${d > 0 ? "+" : "−"}${Math.abs(d)}`),
+      rule: { k: "step", token: step },
+      steps: Array(4).fill(step),
     };
   },
 
@@ -113,7 +116,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
         { text: String(Math.min(9, ansDigit + 1)).repeat(5) },
         { text: String(ansDigit - 1).repeat(5) },
       ],
-      rule: "the digit goes up by 1 — and repeats one more time each step",
+      rule: { k: "repeatDigits" },
     };
   },
 
@@ -130,10 +133,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       terms,
       answer: letter(ansIdx),
       wrongs: wrongIdxs.map(letter),
-      rule:
-        d === 1
-          ? "the next letter each step"
-          : `skip ${d - 1} letter${d - 1 > 1 ? "s" : ""} each step`,
+      rule: { k: "letterSkip", skip: d - 1 },
       steps: Array(4).fill(`+${d}`),
     };
   },
@@ -149,7 +149,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       terms,
       answer: num(ans),
       wrongs: [num(last + last / 2), num(ans + a * r), num(last * (r + 1)), num(ans - a)],
-      rule: `×${r} each step`,
+      rule: { k: "step", token: `×${r}` },
       steps: Array(4).fill(`×${r}`),
     };
   },
@@ -168,7 +168,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       terms: degs.map(arrow),
       answer: arrow(ansDeg),
       wrongs: wrongDegs.map(arrow),
-      rule: `rotates ${Math.abs(step)}° ${step > 0 ? "clockwise" : "anticlockwise"} each step`,
+      rule: { k: "rotation", deg: Math.abs(step), clockwise: step > 0 },
       steps: Array(4).fill(`${step > 0 ? "↻" : "↺"}${Math.abs(step)}°`),
     };
   },
@@ -186,7 +186,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       terms: [num(a), num(t1), num(t2), num(t3)],
       answer: num(ans),
       wrongs: [num(t3 + d + 2 * k), num(ans + 1), num(ans - 1), num(ans + k)],
-      rule: `the step grows by ${k} every time`,
+      rule: { k: "secondDiff", growth: k },
       steps: [0, 1, 2, 3].map((n) => `+${d + n * k}`),
     };
   },
@@ -203,7 +203,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       terms,
       answer: num(ans),
       wrongs: [num(a + 3 * d), num(ans + d), num(ans - e), num(ans + 1)],
-      rule: `two sequences woven together: one +${d}, the other +${e}`,
+      rule: { k: "interleave", a: d, b: e },
       weave: true,
     };
   },
@@ -222,7 +222,7 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       terms: idxs.map(letter),
       answer: letter(ansIdx),
       wrongs: wrongIdxs.map(letter),
-      rule: "the gap grows by one letter each step",
+      rule: { k: "letterGrow" },
       steps: [1, 2, 3, 4, 5].map((n) => `+${n}`),
     };
   },
@@ -262,7 +262,7 @@ interface PatternRound {
   options: Term[]; // 4, shuffled
   answerIdx: number; // index into options
   duration: number;
-  rule: string;
+  rule: RuleSpec;
   steps?: string[];
   weave?: boolean;
 }
@@ -308,10 +308,17 @@ function generateRound(rng: Rng, i: number): PatternRound {
 }
 
 function generateRounds(rng: Rng, total: number): PatternRound[] {
-  return Array.from({ length: total }, (_, i) => generateRound(rng, i));
+  // The plan deliberately revisits rule *types* (you meet arithmetic twice);
+  // what it must never do is serve the identical sequence twice.
+  return distinctRounds(
+    total,
+    (i) => generateRound(rng, i),
+    (r) => r.terms.map(termKey).join(",")
+  );
 }
 
 function TermView({ term, large }: { term: Term; large?: boolean }) {
+  const t = useT();
   if ("text" in term) {
     return <span className={large ? "text-2xl" : ""}>{term.text}</span>;
   }
@@ -319,7 +326,7 @@ function TermView({ term, large }: { term: Term; large?: boolean }) {
     <span
       className={`inline-block ${large ? "text-2xl" : ""}`}
       style={{ transform: `rotate(${term.deg}deg)` }}
-      aria-label={`arrow at ${((term.deg % 360) + 360) % 360} degrees`}
+      aria-label={t.a11y.arrowAt(((term.deg % 360) + 360) % 360)}
     >
       {term.glyph}
     </span>
@@ -334,6 +341,8 @@ interface Gap {
 }
 
 export function PatternGame() {
+  const t = useT();
+  const g = t.games.pattern;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
@@ -361,6 +370,11 @@ export function PatternGame() {
   const gapTimeoutRef = useRef(0);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${ROUNDS}` : g.unit(score);
+
   function setPhaseSafe(p: Phase) {
     phaseRef.current = p;
     setPhase(p);
@@ -371,8 +385,7 @@ export function PatternGame() {
     window.clearTimeout(gapTimeoutRef.current);
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display =
-      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} solved`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("pattern", modeRef.current, { score, display });
     if (modeRef.current === "daily") {
       setDailyResult("pattern", dailyNumber(), {
@@ -424,7 +437,7 @@ export function PatternGame() {
     sfx.reveal();
     setPhaseSafe("scan");
     timer.start(roundsRef.current[roundRef.current].duration, () =>
-      endRound(false, "TOO SLOW!")
+      endRound(false, t.fb.tooSlow)
     );
   }
 
@@ -433,9 +446,9 @@ export function PatternGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.tap();
     if (optionIdx === r.answerIdx) {
-      endRound(true, "NICE ✓");
+      endRound(true, t.fb.nice);
     } else {
-      endRound(false, "NOPE — IT'S RINGED");
+      endRound(false, t.fb.itsRinged);
     }
   }
 
@@ -473,36 +486,21 @@ export function PatternGame() {
   useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="pattern"
-        title="NEXT!"
-        tagline="Crack the rule before the clock does."
-        howTo={[
-          "A sequence appears — numbers, letters, shapes, or spinning arrows. Work out the rule.",
-          "Tap what comes next. The wrong options are the mistakes you were about to make.",
-        ]}
-        controlsHint="Tap an answer · keys 1–4 on desktop"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="pattern" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("pattern", mode);
     return (
       <ResultScreen
         game="pattern"
-        gameName="Next!"
-        path="/pattern"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} solved`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("pattern", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -515,11 +513,11 @@ export function PatternGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
-      <GameTitle game="pattern" title="NEXT!" />
+      <GameTitle game="pattern" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          PATTERN {round + 1}
+          {g.counter} {round + 1}
           {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -590,7 +588,8 @@ export function PatternGame() {
               revealRule ? "animate-pop" : "invisible"
             }`}
           >
-            THE RULE: <span className="text-paper">{r.rule}</span>
+            {t.play.theRule}{" "}
+            <span className="text-paper">{t.rule(r.rule)}</span>
           </p>
         )}
       </div>
@@ -614,9 +613,7 @@ export function PatternGame() {
         ))}
       </div>
 
-      <p className="text-center text-xs text-fog">
-        the rule can hide in gaps, growth, or every other term
-      </p>
+      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }

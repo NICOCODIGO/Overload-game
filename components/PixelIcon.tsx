@@ -19,7 +19,8 @@ export type UiIcon =
   | "github"
   | "instagram"
   | "xsocial"
-  | "youtube";
+  | "youtube"
+  | "mail";
 
 export type IconName = GameId | UiIcon;
 
@@ -483,6 +484,24 @@ const ICONS: Record<IconName, IconDef> = {
       "............",
     ],
     colors: { "#": CORAL, o: PAPER },
+  },
+  // Envelope with a lemon fold — the feedback button's sprite.
+  mail: {
+    rows: [
+      "............",
+      "............",
+      "############",
+      "#oo......oo#",
+      "#.oo....oo.#",
+      "#..oo..oo..#",
+      "#...oooo...#",
+      "#..........#",
+      "#..........#",
+      "############",
+      "............",
+      "............",
+    ],
+    colors: { "#": PAPER, o: LEMON },
   },
 };
 

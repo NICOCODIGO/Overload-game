@@ -12,6 +12,7 @@ import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
 import { WORD_POOLS } from "@/lib/scramble";
+import { useT } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -138,6 +139,8 @@ interface Gap {
 }
 
 export function ScrambleGame() {
+  const t = useT();
+  const g = t.games.scramble;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
@@ -170,6 +173,11 @@ export function ScrambleGame() {
   const gapTimeoutRef = useRef(0);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${ROUNDS}` : g.unit(score);
+
   function setPhaseSafe(p: Phase) {
     phaseRef.current = p;
     setPhase(p);
@@ -192,8 +200,7 @@ export function ScrambleGame() {
     window.clearTimeout(gapTimeoutRef.current);
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
-    const display =
-      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} words`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("scramble", modeRef.current, {
       score,
       tiebreak: Math.round(elapsedRef.current), // total solve time breaks ties
@@ -253,7 +260,7 @@ export function ScrambleGame() {
     setPhaseSafe("play");
     // On a timeout the answer gets spelled out in the slots (see render), so
     // the message just names the miss rather than repeating the word.
-    timer.start(r.duration, () => endRound(false, "TIME'S UP!"));
+    timer.start(r.duration, () => endRound(false, t.fb.timesUp));
   }
 
   /** Called whenever the answer row changes; auto-submits when full. */
@@ -262,7 +269,7 @@ export function ScrambleGame() {
     if (next.some((s) => s === null)) return; // not full yet
     const spelled = next.map((s) => r.tiles[s as number]).join("");
     if (spelled === r.word) {
-      endRound(true, "SOLVED ✓");
+      endRound(true, t.fb.solved);
     } else {
       // Wrong word: shake, shave time, clear the row — but keep the life (and
       // the locked anchor).
@@ -355,36 +362,21 @@ export function ScrambleGame() {
   useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="scramble"
-        title="SCRAMBLE"
-        tagline="Unscramble the word. Ignore the junk."
-        howTo={[
-          "Tap the letter tiles to spell the hidden word before the clock runs out.",
-          "Decoys hide in the pile. When the hint's gone, one correct letter is locked in green to start you off.",
-        ]}
-        controlsHint="Tap the tiles · type on desktop · backspace to undo"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="scramble" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("scramble", mode);
     return (
       <ResultScreen
         game="scramble"
-        gameName="Scramble"
-        path="/scramble"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} words`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("scramble", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -396,11 +388,11 @@ export function ScrambleGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
-      <GameTitle game="scramble" title="SCRAMBLE" />
+      <GameTitle game="scramble" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          WORD {round + 1}
+          {g.counter} {round + 1}
           {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -412,10 +404,10 @@ export function ScrambleGame() {
       <p className="text-center font-pixel text-lg text-fog">
         {r?.showHint ? (
           <>
-            hint: <span className="text-lemon">{r.hint}</span>
+            {t.play.hintLabel} <span className="text-lemon">{r.hint}</span>
           </>
         ) : (
-          <span className="opacity-60">no hint — you&apos;re on your own</span>
+          <span className="opacity-60">{t.play.noHint}</span>
         )}
       </p>
 
@@ -499,9 +491,7 @@ export function ScrambleGame() {
         )}
       </div>
 
-      <p className="text-center font-pixel text-base text-fog">
-        tap a slot to send a letter back · some tiles are junk
-      </p>
+      <p className="text-center font-pixel text-base text-fog">{g.hint}</p>
     </div>
   );
 }

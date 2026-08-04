@@ -10,7 +10,8 @@ import { sfx } from "@/lib/audio";
 import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
-import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
+import { distinctRounds, pick, randInt, shuffle, type Rng } from "@/lib/rng";
+import { useT, type CountKind, type CountQuery } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -22,12 +23,14 @@ const ROUNDS = 14;
 const SURVIVAL_CAP = 120;
 const LIVES = 3;
 
-const COLORS = [
-  { name: "CORAL", css: "var(--color-coral)" },
-  { name: "MINT", css: "var(--color-mint)" },
-  { name: "LEMON", css: "var(--color-lemon)" },
-  { name: "SKY", css: "var(--color-sky)" },
-  { name: "WHITE", css: "var(--color-paper)" },
+// Index-aligned with `t.count.colors`, which holds the names — the palette is
+// the game's, the words are the dictionary's.
+const COLOR_CSS = [
+  "var(--color-coral)",
+  "var(--color-mint)",
+  "var(--color-lemon)",
+  "var(--color-sky)",
+  "var(--color-paper)",
 ] as const;
 
 /**
@@ -44,13 +47,6 @@ const NUMBER_POOL = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 const BARRED_DIGITS = new Set(["6", "9"]);
 
 const SHAPE_POOL = ["●", "■", "▲", "★", "◆"] as const;
-const SHAPE_NAMES: Record<string, string> = {
-  "●": "CIRCLES",
-  "■": "SQUARES",
-  "▲": "TRIANGLES",
-  "★": "STARS",
-  "◆": "DIAMONDS",
-};
 
 type Size = "huge" | "normal" | "tiny";
 
@@ -73,26 +69,9 @@ interface CountItem {
   match: boolean; // satisfies the question — the ones that had to be counted
 }
 
-type QuestionKind =
-  | "color" // count color C
-  | "glyph" // count glyph G — "how many 7s / triangles?"
-  | "huge"
-  | "tiny"
-  | "spin" // numbers only — shapes must stay upright
-  | "hugeColor" // combo: huge AND color C
-  | "glyphColor" // combo: glyph G AND color C
-  | "hugeGlyph"; // combo: huge AND glyph G
-
-interface QuestionPart {
-  text: string;
-  color?: string;
-  /** Render as a bordered chip — used for digit targets so "5" never reads
-      as part of the sentence. */
-  chip?: boolean;
-  /** Underline: marks the exact thing being counted, so "COUNT THE CORAL
-      TRIANGLES" can't be skimmed as "coral shapes". */
-  emph?: boolean;
-}
+/** Which question a round asks: color / glyph hunt / size / spin, plus the
+    three cruel combos. Defined in i18n.ts so both languages stay in step. */
+type QuestionKind = CountKind;
 
 interface CountRound {
   family: Family;
@@ -101,7 +80,9 @@ interface CountRound {
   items: CountItem[];
   duration: number;
   cols: number;
-  parts: QuestionPart[];
+  /** What the round asks, as data. The sentence is built at render time, so
+      switching language mid-run rewrites the banner instead of stranding it. */
+  query: CountQuery;
 }
 
 /** Escalation: easy pops → glyph hunts → sizes & spinners → cruel combos,
@@ -151,7 +132,7 @@ function roundPlan(i: number): {
 }
 
 function colorExcept(rng: Rng, avoid: number): number {
-  const idx = randInt(rng, 0, COLORS.length - 2);
+  const idx = randInt(rng, 0, COLOR_CSS.length - 2);
   return idx >= avoid ? idx + 1 : idx;
 }
 
@@ -184,7 +165,7 @@ function makeItem(
   // about size, so it's never a red herring on a color/glyph/spin question.
   let item = {
     glyph: pick(rng, pool),
-    colorIdx: randInt(rng, 0, COLORS.length - 1),
+    colorIdx: randInt(rng, 0, COLOR_CSS.length - 1),
     size: "normal" as Size,
     spin: family === "shapes" ? false : rng() < 0.2,
   };
@@ -254,67 +235,6 @@ function makeItem(
   return item;
 }
 
-/** Question banner, split into parts so color words render in their color. */
-function buildParts(meta: RoundMeta): QuestionPart[] {
-  const c = COLORS[meta.colorIdx];
-  const g = meta.pool[meta.glyphIdx];
-  switch (meta.kind) {
-    case "color":
-      return [
-        { text: "COUNT THE " },
-        { text: c.name, color: c.css, emph: true },
-        { text: meta.family === "shapes" ? " SHAPES" : " NUMBERS" },
-      ];
-    case "glyph":
-      return meta.family === "numbers"
-        ? [{ text: "HOW MANY" }, { text: g, chip: true }, { text: "?" }]
-        : [
-            { text: "HOW MANY " },
-            { text: SHAPE_NAMES[g], emph: true },
-            { text: "?" },
-          ];
-    case "huge":
-      return [{ text: "COUNT THE " }, { text: "HUGE", emph: true }, { text: " ONES" }];
-    case "tiny":
-      return [{ text: "COUNT THE " }, { text: "TINY", emph: true }, { text: " ONES" }];
-    case "spin":
-      return [
-        { text: "COUNT THE " },
-        { text: "SPINNING", emph: true },
-        { text: " ONES" },
-      ];
-    case "hugeColor":
-      return [
-        { text: "COUNT THE " },
-        { text: "HUGE", emph: true },
-        { text: " " },
-        { text: c.name, color: c.css, emph: true },
-        { text: " ONES" },
-      ];
-    case "glyphColor":
-      return [
-        { text: "COUNT THE " },
-        { text: c.name, color: c.css, emph: true },
-        { text: " " },
-        { text: SHAPE_NAMES[g], emph: true },
-      ];
-    case "hugeGlyph":
-      return meta.family === "numbers"
-        ? [
-            { text: "COUNT THE " },
-            { text: "HUGE", emph: true },
-            { text: " " },
-            { text: g, chip: true },
-          ]
-        : [
-            { text: "COUNT THE " },
-            { text: "HUGE", emph: true },
-            { text: " " },
-            { text: SHAPE_NAMES[g], emph: true },
-          ];
-  }
-}
-
 function generateRound(rng: Rng, i: number): CountRound {
   const plan = roundPlan(i);
   const pool: readonly string[] =
@@ -323,7 +243,7 @@ function generateRound(rng: Rng, i: number): CountRound {
     family: plan.family,
     kind: plan.kind,
     pool,
-    colorIdx: randInt(rng, 0, COLORS.length - 1),
+    colorIdx: randInt(rng, 0, COLOR_CSS.length - 1),
     glyphIdx: randInt(rng, 0, pool.length - 1),
   };
   const answer = randInt(rng, 2, Math.min(8, plan.count - 4));
@@ -359,12 +279,23 @@ function generateRound(rng: Rng, i: number): CountRound {
     items,
     duration: plan.duration,
     cols,
-    parts: buildParts(meta),
+    query: {
+      kind: meta.kind,
+      numbers: meta.family === "numbers",
+      colorIdx: meta.colorIdx,
+      glyph: pool[meta.glyphIdx],
+    },
   };
 }
 
 function generateRounds(rng: Rng, total: number): CountRound[] {
-  return Array.from({ length: total }, (_, i) => generateRound(rng, i));
+  // Keyed on the question as asked — "COUNT THE CORAL TRIANGLES" landing
+  // twice in one run is the repeat, not the mob behind it.
+  return distinctRounds(
+    total,
+    (i) => generateRound(rng, i),
+    (r) => `${r.query.kind}|${r.query.colorIdx}|${r.query.glyph}`
+  );
 }
 
 type Phase = "intro" | "scan" | "gap" | "result";
@@ -375,6 +306,8 @@ interface Gap {
 }
 
 export function CountGame() {
+  const t = useT();
+  const g = t.games.count;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [round, setRound] = useState(0);
@@ -404,6 +337,11 @@ export function CountGame() {
   const gapTimeoutRef = useRef(0);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${ROUNDS}` : g.unit(score);
+
   function setPhaseSafe(p: Phase) {
     phaseRef.current = p;
     setPhase(p);
@@ -416,8 +354,7 @@ export function CountGame() {
     const time = elapsedRef.current;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
     // Time still breaks ties internally, but the shown score stays clean.
-    const display =
-      modeRef.current === "daily" ? `${score}/${ROUNDS}` : `${score} answered`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("count", modeRef.current, {
       score,
       tiebreak: time,
@@ -481,9 +418,7 @@ export function CountGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.reveal();
     setPhaseSafe("scan");
-    timer.start(r.duration, () =>
-      endRound(false, `TIME'S UP — IT WAS ${r.answer}`)
-    );
+    timer.start(r.duration, () => endRound(false, t.fb.timesUpItWas(r.answer)));
   }
 
   function handleDigit(d: number) {
@@ -491,9 +426,9 @@ export function CountGame() {
     const r = roundsRef.current[roundRef.current];
     sfx.tap();
     if (d === r.answer) {
-      endRound(true, "NICE ✓");
+      endRound(true, t.fb.nice);
     } else {
-      endRound(false, `IT WAS ${r.answer}`);
+      endRound(false, t.fb.itWas(r.answer));
     }
   }
 
@@ -533,36 +468,21 @@ export function CountGame() {
   useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="count"
-        title="HEADCOUNT"
-        tagline="Count the chaos. Answer in one tap."
-        howTo={[
-          "A mob of numbers and shapes appears — count only what the question asks for, then tap the keypad.",
-          "6 and 9 wear a bar on the bottom, so a spinning one still reads right. Read very carefully.",
-        ]}
-        controlsHint="Tap the keypad · number keys on desktop"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="count" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("count", mode);
     return (
       <ResultScreen
         game="count"
-        gameName="Headcount"
-        path="/count"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily" ? `${summary.score}/${ROUNDS}` : `${summary.score} answered`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("count", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -570,10 +490,19 @@ export function CountGame() {
   }
 
   const r = rounds[round];
+  // Built here, not at generation time, so the banner follows the language
+  // button even mid-run. The palette is ours; the words are the dictionary's.
+  const parts = r
+    ? t.count.question(r.query).map((part) =>
+        part.emph && part.text === t.count.colors[r.query.colorIdx]
+          ? { ...part, color: COLOR_CSS[r.query.colorIdx] }
+          : part
+      )
+    : [];
   // Only spell the bar out on the rounds where mistaking a 6 for a 9 would
   // actually cost you the answer.
-  const barHint = r?.parts.some((p) => p.chip && BARRED_DIGITS.has(p.text))
-    ? " · the bar marks the bottom"
+  const barHint = parts.some((p) => p.chip && BARRED_DIGITS.has(p.text))
+    ? t.count.barNote
     : "";
 
   // On a miss, fade out everything that didn't need counting so the items that
@@ -582,11 +511,11 @@ export function CountGame() {
 
   return (
     <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
-      <GameTitle game="count" title="HEADCOUNT" />
+      <GameTitle game="count" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          QUESTION {round + 1}
+          {g.counter} {round + 1}
           {mode === "daily" ? `/${ROUNDS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -597,7 +526,7 @@ export function CountGame() {
       {/* The question */}
       <div className="text-center">
         <p className="font-display text-lg leading-snug">
-          {r?.parts.map((part, i) => (
+          {parts.map((part, i) => (
             <span
               key={i}
               style={{ color: part.color }}
@@ -622,15 +551,19 @@ export function CountGame() {
           ))}
         </p>
         {r?.kind === "spin" && (
-          <p className="text-xs text-fog">(spinning = the tilted ones)</p>
+          <p className="text-xs text-fog">{t.count.spinNote}</p>
         )}
         {r?.kind === "glyph" && (
           <p className="text-xs text-fog">
-            (any color · any size{barHint})
+            {t.count.anyColorAnySize}
+            {barHint})
           </p>
         )}
         {r?.kind === "hugeGlyph" && (
-          <p className="text-xs text-fog">(any color{barHint})</p>
+          <p className="text-xs text-fog">
+            {t.count.anyColor}
+            {barHint})
+          </p>
         )}
       </div>
 
@@ -653,7 +586,7 @@ export function CountGame() {
               fontSize: `${(
                 Math.min(66 / r.cols, 11) * SIZE_SCALE[item.size]
               ).toFixed(2)}cqw`,
-              color: COLORS[item.colorIdx].css,
+              color: COLOR_CSS[item.colorIdx],
               opacity: revealing && !item.match ? 0 : 1,
               zIndex: revealing && item.match ? 10 : SIZE_Z[item.size],
             }}

@@ -60,6 +60,63 @@ export function shuffle<T>(rng: Rng, arr: readonly T[]): T[] {
 }
 
 /**
+ * Draws from `pool` without repeats: walks a shuffled deck and reshuffles once
+ * it runs out. The reshuffle never puts the just-drawn item first, so the wrap
+ * can't hand you the same thing twice in a row.
+ *
+ * Use this wherever a run picks from a small fixed pool — `pick` draws *with*
+ * replacement, which is why a 14-round hunt through 6 pairs used to show the
+ * same pair three times.
+ */
+export function makeBag<T>(rng: Rng, pool: readonly T[]): () => T {
+  let deck: T[] = [];
+  let next = 0;
+  let last: T | undefined;
+  return () => {
+    if (next >= deck.length) {
+      deck = shuffle(rng, pool);
+      if (deck.length > 1 && deck[0] === last) {
+        [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
+      }
+      next = 0;
+    }
+    last = deck[next++];
+    return last;
+  };
+}
+
+/**
+ * Builds `total` rounds, rejecting any puzzle the run has already shown.
+ *
+ * `key` is the player-visible identity of a round — the clock face's time, the
+ * anomaly's glyph, the question being asked. Two rounds with the same key read
+ * as "wait, I just did this one", which is what makes a daily feel stale.
+ *
+ * Retries walk the same RNG stream, so the result is still fully determined by
+ * the seed and every player gets the identical daily. Long unlimited runs will
+ * eventually exhaust a small pool; past that point the guarantee softens to
+ * "never twice in a row", which is the part players actually notice.
+ */
+export function distinctRounds<T>(
+  total: number,
+  make: (index: number) => T,
+  key: (round: T) => string,
+  tries = 24
+): T[] {
+  const out: T[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < total; i++) {
+    let round = make(i);
+    for (let t = 0; t < tries && seen.has(key(round)); t++) round = make(i);
+    const last = out.length ? key(out[out.length - 1]) : null;
+    for (let t = 0; t < tries && key(round) === last; t++) round = make(i);
+    seen.add(key(round));
+    out.push(round);
+  }
+  return out;
+}
+
+/**
  * Derangement: shuffle until no element sits at its original index.
  * Used for Stroop label scrambles — a label must never match its button color.
  */

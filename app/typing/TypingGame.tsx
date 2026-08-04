@@ -14,6 +14,7 @@ import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { shuffle, type Rng } from "@/lib/rng";
 import { MEDIUM_WORDS, PHRASES, SHORT_WORDS } from "@/lib/words";
+import { useT } from "@/lib/i18n";
 import {
   bumpStreak,
   getBest,
@@ -89,6 +90,8 @@ function promptDuration(index: number, text: string): number {
 type Phase = "intro" | "typing" | "miss" | "result";
 
 export function TypingGame() {
+  const t = useT();
+  const g = t.games.typing;
   const [phase, setPhase] = useState<Phase>("intro");
   const [mode, setMode] = useState<Mode>("daily");
   const [index, setIndex] = useState(0);
@@ -119,6 +122,11 @@ export function TypingGame() {
   const missTimeoutRef = useRef(0);
   const timer = useCountdown();
 
+  /** Score line, in the player's language. Derived from the raw score every
+      render, so a record set in English reads correctly in Spanish. */
+  const fmt = (score: number, m: Mode) =>
+    m === "daily" ? `${score}/${PROMPTS}` : g.unit(score);
+
   function accuracy(): number {
     return totalKeysRef.current === 0
       ? 100
@@ -131,8 +139,7 @@ export function TypingGame() {
     const acc = accuracy();
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
     // Accuracy still breaks ties internally, but the shown score stays clean.
-    const display =
-      modeRef.current === "daily" ? `${score}/${PROMPTS}` : `${score} prompts`;
+    const display = fmt(score, modeRef.current);
     const isBest = submitBest("typing", modeRef.current, {
       score,
       tiebreak: 100 - acc, // higher accuracy breaks ties
@@ -252,38 +259,21 @@ export function TypingGame() {
   useEffect(() => () => window.clearTimeout(missTimeoutRef.current), []);
 
   if (phase === "intro") {
-    return (
-      <IntroScreen
-        game="typing"
-        title="PANIC TYPE"
-        tagline="Precision typing with a gun to your deadline."
-        howTo={[
-          "Type each prompt exactly — capitals, punctuation, everything — before the bar empties.",
-          "Typos flash red and must be backspaced. Miss the clock and you lose a life.",
-        ]}
-        controlsHint="Just type · on-screen keyboard on mobile"
-        onStart={startRun}
-      />
-    );
+    return <IntroScreen game="typing" format={fmt} onStart={startRun} />;
   }
 
   if (phase === "result") {
+    const best = getBest("typing", mode);
     return (
       <ResultScreen
         game="typing"
-        gameName="Panic Type"
-        path="/typing"
         mode={mode}
         dailyNum={dailyNumber()}
-        scoreLine={
-          mode === "daily"
-            ? `${summary.score}/${PROMPTS}`
-            : `${summary.score} prompts`
-        }
+        scoreLine={fmt(summary.score, mode)}
+        bestDisplay={best ? fmt(best.score, mode) : null}
         emojis={summary.emojis}
         survived={survived}
         newBest={newBest}
-        bestDisplay={getBest("typing", mode)?.display ?? null}
         streak={streak}
         onPlayAgain={() => startRun(mode)}
       />
@@ -299,11 +289,11 @@ export function TypingGame() {
       className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden py-2 sm:gap-4 sm:py-4"
       onPointerDown={() => inputRef.current?.focus()}
     >
-      <GameTitle game="typing" title="PANIC TYPE" />
+      <GameTitle game="typing" />
 
       <div className="flex items-center justify-between">
         <span className="font-display text-xs text-fog">
-          PROMPT {index + 1}
+          {g.counter} {index + 1}
           {mode === "daily" ? `/${PROMPTS}` : ""}
         </span>
         <Lives lives={lives} />
@@ -320,7 +310,7 @@ export function TypingGame() {
       >
         {phase === "miss" ? (
           <p className="animate-pop text-center font-display text-3xl text-coral">
-            TIME&apos;S UP!
+            {t.fb.timesUp}
           </p>
         ) : (
         <p className="text-center font-mono text-2xl leading-relaxed tracking-wide break-words">
@@ -368,16 +358,14 @@ export function TypingGame() {
         autoCapitalize="none"
         spellCheck={false}
         enterKeyHint="go"
-        aria-label="Type the prompt here"
-        placeholder="type here…"
+        aria-label={t.play.typeAria}
+        placeholder={t.play.typeHere}
         className="w-full rounded-xl border-2 border-line bg-panel2 px-4 py-3 text-center font-mono text-xl text-paper placeholder:text-fog/50 focus:border-lemon focus:outline-none"
       />
 
       {/* Flavour only, and the intro already says it — on a phone the space
           it costs is better spent on the prompt. */}
-      <p className="hidden text-center text-xs text-fog sm:block">
-        exact match — capitals &amp; punctuation count
-      </p>
+      <p className="hidden text-center text-xs text-fog sm:block">{g.hint}</p>
     </div>
   );
 }
