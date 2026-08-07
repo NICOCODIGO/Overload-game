@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { GameId, Mode } from "@/lib/daily";
 import { GAMES } from "@/lib/games";
 import { getBest } from "@/lib/storage";
-import { useClientValue } from "@/lib/hooks";
+import { useClientValue, useLiveBackdrop } from "@/lib/hooks";
 import { unlockAudio } from "@/lib/audio";
 import { useT } from "@/lib/i18n";
 import { PixelIcon, type UiIcon } from "./PixelIcon";
@@ -25,6 +25,7 @@ interface IntroScreenProps {
  */
 export function IntroScreen(props: IntroScreenProps) {
   const t = useT();
+  useLiveBackdrop(); // grid runs until the round starts and this unmounts
   const g = t.games[props.game];
   const bestDaily = useClientValue(() => getBest(props.game, "daily"), null);
   const bestSurvival = useClientValue(

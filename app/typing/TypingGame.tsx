@@ -365,7 +365,6 @@ export function TypingGame() {
 
       {/* Flavour only, and the intro already says it — on a phone the space
           it costs is better spent on the prompt. */}
-      <p className="hidden text-center text-xs text-fog sm:block">{g.hint}</p>
     </div>
   );
 }

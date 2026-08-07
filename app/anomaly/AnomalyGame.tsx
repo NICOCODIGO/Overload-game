@@ -475,7 +475,6 @@ export function AnomalyGame() {
         )}
       </div>
 
-      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }

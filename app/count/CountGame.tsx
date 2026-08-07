@@ -262,10 +262,31 @@ function generateRound(rng: Rng, i: number): CountRound {
   const items: CountItem[] = looks.map((look, idx) => {
     const col = idx % cols;
     const row = Math.floor(idx / cols);
+
+    // Keep every glyph fully inside the frame. The field clips its overflow,
+    // and a clipped digit is unanswerable: a 9 with its tail cut off is a 0,
+    // and a 9 whose bar is cut off is a 6. The inset used to be a flat 6%/8%,
+    // which a "huge" glyph (2.1x) overflows on its own — so the answer was
+    // sometimes unknowable through no fault of the player.
+    //
+    // Font size is in cqw, i.e. a % of the field's WIDTH, so a horizontal
+    // inset can use it directly. The field is 4:3, so the same distance is
+    // 4/3 as large expressed as a % of its HEIGHT.
+    const fontCqw = Math.min(66 / cols, 11) * SIZE_SCALE[look.size];
+    // Spinners turn a full 360°, so they sweep their own diagonal; a still
+    // glyph only needs its half-width and half-height. Both carry a little
+    // slack for `wobble`.
+    const halfW = fontCqw * (look.spin ? 0.5 : 0.32);
+    const halfH = fontCqw * (look.spin ? 0.5 : 0.4);
+    // Never let the safe area collapse to nothing on a very large glyph.
+    const inset = (m: number) => Math.min(m, 45);
+    const place = (v: number, m: number) =>
+      Math.min(100 - inset(m), Math.max(inset(m), v));
+
     return {
       ...look,
-      x: Math.min(94, Math.max(6, ((col + 0.5 + (rng() - 0.5) * 0.55) / cols) * 100)),
-      y: Math.min(92, Math.max(8, ((row + 0.5 + (rng() - 0.5) * 0.55) / rows) * 100)),
+      x: place(((col + 0.5 + (rng() - 0.5) * 0.55) / cols) * 100, halfW),
+      y: place(((row + 0.5 + (rng() - 0.5) * 0.55) / rows) * 100, halfH * (4 / 3)),
       // Small on purpose — big enough to feel organic, not big enough to
       // blur the huge/normal/tiny signal players actually rely on.
       wobble: 0.96 + rng() * 0.08,

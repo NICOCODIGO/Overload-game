@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bungee, Space_Grotesk, VT323 } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
+import { GridBackdrop } from "@/components/GridBackdrop";
 
 const bungee = Bungee({
   variable: "--font-bungee",
@@ -67,6 +68,7 @@ export default function RootLayout({
       {/* dvh (not vh) so mobile browser chrome is accounted for — the games
           are meant to fit the phone screen without scrolling. */}
       <body className="min-h-dvh flex flex-col">
+        <GridBackdrop />
         <Header />
         <main className="flex-1 flex flex-col w-full max-w-3xl mx-auto px-4 pb-4 sm:pb-10">
           {children}

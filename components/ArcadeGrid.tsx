@@ -4,9 +4,11 @@ import { GAMES, GAME_ORDER } from "@/lib/games";
 import { GameCard } from "./GameCard";
 import { SiteFooter } from "./SiteFooter";
 import { useT } from "@/lib/i18n";
+import { useLiveBackdrop } from "@/lib/hooks";
 
 export function ArcadeGrid() {
   const t = useT();
+  useLiveBackdrop(); // attract mode — the grid runs on the arcade floor
 
   return (
     // Content flows from the top; the footer is pushed to the bottom with

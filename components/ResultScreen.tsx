@@ -6,6 +6,7 @@ import type { GameId, Mode } from "@/lib/daily";
 import { GAMES } from "@/lib/games";
 import { buildShareText, copyToClipboard } from "@/lib/share";
 import { useT } from "@/lib/i18n";
+import { useLiveBackdrop } from "@/lib/hooks";
 import { PixelIcon, type UiIcon } from "./PixelIcon";
 import { GameTitle } from "./GameTitle";
 import { Confetti } from "./Confetti";
@@ -44,6 +45,7 @@ interface ResultScreenProps {
 /** Shared post-game screen: emoji strip, score, share-to-clipboard, replay. */
 export function ResultScreen(props: ResultScreenProps) {
   const t = useT();
+  useLiveBackdrop(); // round's over — let the grid move again
   const meta = GAMES[props.game];
   const [copied, setCopied] = useState(false);
   const bestBadgeRef = useRef<HTMLDivElement>(null);

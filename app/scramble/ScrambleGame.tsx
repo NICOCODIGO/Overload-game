@@ -491,7 +491,6 @@ export function ScrambleGame() {
         )}
       </div>
 
-      <p className="text-center font-pixel text-base text-fog">{g.hint}</p>
     </div>
   );
 }
