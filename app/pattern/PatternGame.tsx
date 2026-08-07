@@ -24,6 +24,16 @@ const ROUNDS = 11;
 const SURVIVAL_CAP = 100;
 const LIVES = 3;
 
+/** A hit needs no explanation — just enough beat to register the ring. */
+const HIT_GAP_MS = 650;
+/** A miss puts the rule on screen. This is the *ceiling* on reading time, not
+    the wait: the player can dismiss it the moment they've got it. Long enough
+    that a slow reader who never taps still finishes the sentence. */
+const MISS_GAP_MS = 5200;
+/** Taps are ignored this long after a miss so the second half of an impatient
+    double-tap on an option can't blow past the explanation it just earned. */
+const SKIP_ARM_MS = 750;
+
 /** A sequence term: plain text, or a glyph at a rotation (arrow patterns). */
 type Term = { text: string } | { glyph: string; deg: number };
 
@@ -306,6 +316,9 @@ export function PatternGame() {
   const [round, setRound] = useState(0);
   const [lives, setLives] = useState(LIVES);
   const [gap, setGap] = useState<Gap | null>(null);
+  /** The rule reveal is dismissible — but only once it has been up long enough
+      to be a deliberate "I've read it", never a stray tap. */
+  const [canSkip, setCanSkip] = useState(false);
   const [newBest, setNewBest] = useState(false);
   const [streak, setStreak] = useState(0);
   const [survived, setSurvived] = useState(false);
@@ -326,6 +339,8 @@ export function PatternGame() {
   const lockedRef = useRef(false);
   const phaseRef = useRef<Phase>("intro");
   const gapTimeoutRef = useRef(0);
+  const armTimeoutRef = useRef(0);
+  const canSkipRef = useRef(false);
   const timer = useCountdown();
 
   /** Score line, in the player's language. Derived from the raw score every
@@ -338,9 +353,20 @@ export function PatternGame() {
     setPhase(p);
   }
 
+  function setCanSkipSafe(v: boolean) {
+    canSkipRef.current = v;
+    setCanSkip(v);
+  }
+
+  function clearGapTimers() {
+    window.clearTimeout(gapTimeoutRef.current);
+    window.clearTimeout(armTimeoutRef.current);
+  }
+
   function finish(didSurvive: boolean) {
     timer.stop();
-    window.clearTimeout(gapTimeoutRef.current);
+    clearGapTimers();
+    setCanSkipSafe(false);
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
     const display = fmt(score, modeRef.current);
@@ -360,6 +386,26 @@ export function PatternGame() {
     else sfx.gameOver();
   }
 
+  /** Leave the gap — on the auto-advance timer, or early because the player
+      said they're done reading. Idempotent: the phase check makes the second
+      caller (a tap that also bubbles, a key that also clicks) a no-op. */
+  function leaveGap() {
+    if (phaseRef.current !== "gap") return;
+    clearGapTimers();
+    setCanSkipSafe(false);
+    if (livesRef.current <= 0) {
+      finish(false);
+    } else if (roundRef.current + 1 >= totalRef.current) {
+      finish(true);
+    } else {
+      roundRef.current += 1;
+      lockedRef.current = false;
+      setRound(roundRef.current);
+      setGap(null);
+      beginRound();
+    }
+  }
+
   function endRound(correct: boolean, msg: string) {
     if (lockedRef.current) return;
     lockedRef.current = true;
@@ -372,23 +418,18 @@ export function PatternGame() {
     if (correct) sfx.success();
     else sfx.error();
 
+    // A miss lingers: the rule is on screen and deserves reading time. The
+    // timeout is the backstop — the player normally taps out of it sooner.
     gapTimeoutRef.current = window.setTimeout(
-      () => {
-        if (livesRef.current <= 0) {
-          finish(false);
-        } else if (roundRef.current + 1 >= totalRef.current) {
-          finish(true);
-        } else {
-          roundRef.current += 1;
-          lockedRef.current = false;
-          setRound(roundRef.current);
-          setGap(null);
-          beginRound();
-        }
-      },
-      // A miss lingers: the rule is on screen and deserves reading time.
-      correct ? 650 : 2900
+      leaveGap,
+      correct ? HIT_GAP_MS : MISS_GAP_MS
     );
+    if (!correct) {
+      armTimeoutRef.current = window.setTimeout(
+        () => setCanSkipSafe(true),
+        SKIP_ARM_MS
+      );
+    }
   }
 
   function beginRound() {
@@ -420,18 +461,27 @@ export function PatternGame() {
     roundRef.current = 0;
     lockedRef.current = false;
     modeRef.current = m;
+    clearGapTimers();
     setMode(m);
     setLives(LIVES);
     setRound(0);
     setGap(null);
+    setCanSkipSafe(false);
     setNewBest(false);
     setSurvived(false);
     beginRound();
   }
 
-  // Desktop: keys 1–4 pick the four options.
+  // Desktop: keys 1–4 pick the four options; space/enter dismisses the rule.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (phaseRef.current === "gap") {
+        if (canSkipRef.current && (e.key === " " || e.key === "Enter")) {
+          e.preventDefault(); // don't also "click" a focused button
+          leaveGap();
+        }
+        return;
+      }
       const idx = ["1", "2", "3", "4"].indexOf(e.key);
       if (idx >= 0) handlePick(idx);
     };
@@ -440,8 +490,8 @@ export function PatternGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Clean up the gap timeout if the player navigates away mid-run.
-  useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
+  // Clean up the gap timeouts if the player navigates away mid-run.
+  useEffect(() => () => clearGapTimers(), []);
 
   if (phase === "intro") {
     return <IntroScreen game="pattern" format={fmt} onStart={startRun} />;
@@ -470,7 +520,13 @@ export function PatternGame() {
   const revealRule = phase === "gap" && gap !== null && !gap.ok;
 
   return (
-    <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
+    // Anywhere-tap dismisses the rule reveal (once armed) — on a phone the
+    // thumb is nowhere near the button, and the button bubbles here harmlessly
+    // because leaveGap is idempotent.
+    <div
+      className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4"
+      onPointerDown={canSkip ? leaveGap : undefined}
+    >
       <GameTitle game="pattern" />
 
       <div className="flex items-center justify-between">
@@ -500,8 +556,13 @@ export function PatternGame() {
       </div>
 
       {/* The sequence. On a miss the rule is drawn ON the pattern: step
-          labels appear between the boxes. */}
-      <div className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-line bg-panel p-5 shadow-chunk">
+          labels appear between the boxes, and the card lights up so the eye
+          goes here rather than to the coral verdict it already understood. */}
+      <div
+        className={`flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border-2 bg-panel p-5 shadow-chunk transition-colors ${
+          revealRule ? "border-lemon/70" : "border-line"
+        }`}
+      >
         {/* Always one row. The tiles flex to share the row's width equally
             (capped at the desktop size), so any count of terms — and any glyph,
             arrows included — fits on a single line instead of overflowing. */}
@@ -517,7 +578,7 @@ export function PatternGame() {
                 // Rendered (reserving its width) even during play, just hidden,
                 // so revealing the rule never re-wraps the row or grows the card.
                 <span
-                  className={`shrink-0 font-display text-[10px] text-mint sm:text-xs ${
+                  className={`shrink-0 font-display text-[11px] text-mint sm:text-sm ${
                     revealRule ? "animate-pop" : "invisible"
                   }`}
                 >
@@ -534,13 +595,22 @@ export function PatternGame() {
         {r && (
           // Also reserved during play (invisible) so its height is baked into
           // the card from the start — the options never get shoved down.
+          // The sentence gets its own line, at option size and in lemon: it is
+          // the lesson, not a footnote, and it must survive a glance.
           <p
-            className={`w-full border-t-2 border-line pt-2 text-center text-xs text-fog ${
-              revealRule ? "animate-pop" : "invisible"
+            className={`w-full border-t-2 border-line pt-2.5 text-center ${
+              revealRule ? "animate-rise" : "invisible"
             }`}
+            // A beat behind the step labels, so the eye reads the pattern
+            // annotation first and the sentence second instead of racing both.
+            style={{ animationDelay: "180ms" }}
           >
-            {t.play.theRule}{" "}
-            <span className="text-paper">{t.rule(r.rule)}</span>
+            <span className="font-display text-[10px] tracking-widest text-fog sm:text-xs">
+              {t.play.theRule}
+            </span>
+            <span className="block text-sm leading-snug font-semibold text-lemon sm:text-base">
+              {t.rule(r.rule)}
+            </span>
           </p>
         )}
       </div>
@@ -564,6 +634,19 @@ export function PatternGame() {
         ))}
       </div>
 
+      {/* The reveal ends when the reader says so. Height is reserved so the
+          options don't hop when it arrives. */}
+      <div className="flex h-12 items-center justify-center">
+        {canSkip && (
+          <button
+            type="button"
+            onPointerDown={leaveGap}
+            className="animate-rise rounded-xl border-2 border-line bg-panel px-6 py-2 font-display text-sm text-fog shadow-chunk-sm transition-transform hover:-translate-y-0.5 hover:text-paper active:translate-y-1 active:shadow-none"
+          >
+            {t.play.gotIt}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
