@@ -7,6 +7,48 @@ Every game has a **daily challenge** — seeded from the UTC date, so every
 player worldwide gets the identical run — plus an endless **unlimited mode**
 (how long can you last?), scored by rounds survived.
 
+<!--
+  GALLERY — drop your clips in .github/demos/ using the filenames below and
+  they appear here. See .github/demos/README.md for naming and sizing.
+
+  A cell whose file doesn't exist yet renders as a broken-image icon on
+  GitHub. To hide the gallery until all nine are ready, move the `-->` from
+  here down to just after the closing </table> tag.
+-->
+
+<table align="center">
+  <tr>
+    <td align="center"><b>Simon Says</b><br><sub>obey only when Simon says</sub></td>
+    <td align="center"><b>Signal Rush</b><br><sub>intercept and re-key the code</sub></td>
+    <td align="center"><b>Panic Type</b><br><sub>type it exactly, fast</sub></td>
+  </tr>
+  <tr>
+    <td><img src=".github/demos/simon.gif" alt="Simon Says gameplay" width="260"></td>
+    <td><img src=".github/demos/sequence.gif" alt="Signal Rush gameplay" width="260"></td>
+    <td><img src=".github/demos/typing.gif" alt="Panic Type gameplay" width="260"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Overclocked</b><br><sub>read the clock before it lies</sub></td>
+    <td align="center"><b>Anomaly</b><br><sub>find the one that doesn't belong</sub></td>
+    <td align="center"><b>Headcount</b><br><sub>count only what's asked</sub></td>
+  </tr>
+  <tr>
+    <td><img src=".github/demos/clock.gif" alt="Overclocked gameplay" width="260"></td>
+    <td><img src=".github/demos/anomaly.gif" alt="Anomaly gameplay" width="260"></td>
+    <td><img src=".github/demos/count.gif" alt="Headcount gameplay" width="260"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Next!</b><br><sub>crack the rule, pick what follows</sub></td>
+    <td align="center"><b>Scramble</b><br><sub>unscramble past the junk letters</sub></td>
+    <td align="center"><b>Blink</b><br><sub>spot what changed</sub></td>
+  </tr>
+  <tr>
+    <td><img src=".github/demos/pattern.gif" alt="Next! gameplay" width="260"></td>
+    <td><img src=".github/demos/scramble.gif" alt="Scramble gameplay" width="260"></td>
+    <td><img src=".github/demos/blink.gif" alt="Blink gameplay" width="260"></td>
+  </tr>
+</table>
+
 | Route | Game | The stress |
 | --- | --- | --- |
 | `/simon` | **Simon Says** | 30 commands, 3 lives. Only obey when the card is stamped SIMON SAYS. From round 5 the button labels lie (Stroop trap), and idle traps punish twitchy fingers. |

@@ -161,8 +161,6 @@ interface Dict {
     noHint: string;
     // Next!
     theRule: string;
-    /** Dismisses the rule reveal early — the pause waits on the reader. */
-    gotIt: string;
   };
 
   /** Screen-reader-only labels. Invisible, but still the site talking. */
@@ -452,7 +450,6 @@ const EN: Dict = {
     hintLabel: "hint:",
     noHint: "no hint",
     theRule: "THE RULE",
-    gotIt: "GOT IT ▸",
   },
   a11y: {
     timeRemaining: "Time remaining",
