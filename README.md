@@ -1,4 +1,6 @@
-# OVERLOAD — the brain arcade
+<p align="center">
+  <img src=".github/overload.svg" alt="OVERLOAD — the brain arcade" width="880">
+</p>
 
 Nine fast, stressful mini-games that test reflexes, focus, and patience.
 Every game has a **daily challenge** — seeded from the UTC date, so every
