@@ -634,19 +634,6 @@ export function PatternGame() {
         ))}
       </div>
 
-      {/* The reveal ends when the reader says so. Height is reserved so the
-          options don't hop when it arrives. */}
-      <div className="flex h-12 items-center justify-center">
-        {canSkip && (
-          <button
-            type="button"
-            onPointerDown={leaveGap}
-            className="animate-rise rounded-xl border-2 border-line bg-panel px-6 py-2 font-display text-sm text-fog shadow-chunk-sm transition-transform hover:-translate-y-0.5 hover:text-paper active:translate-y-1 active:shadow-none"
-          >
-            {t.play.gotIt}
-          </button>
-        )}
-      </div>
     </div>
   );
 }
