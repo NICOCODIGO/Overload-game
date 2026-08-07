@@ -49,6 +49,37 @@ export function useMuted(): boolean {
 }
 
 /**
+ * How many mounted screens currently want the backdrop grid moving. A count
+ * rather than a boolean because a screen transition briefly overlaps the old
+ * and new component, and a boolean would let the loser's cleanup win and
+ * leave the grid stuck on the wrong setting.
+ */
+let liveBackdrops = 0;
+
+/**
+ * While mounted, let the backdrop grid animate.
+ *
+ * The arcade menu and every intro/result screen call this. A live round
+ * mounts none of them, so the grid freezes mid-scroll the moment play starts
+ * and picks back up on the result screen — motion in the corner of your eye
+ * is the last thing four of these games need, and the freeze doubles as a
+ * "now concentrate" cue.
+ *
+ * Frozen, not hidden: the play surfaces are opaque (`bg-panel`), so the grid
+ * only ever frames them. Removing it entirely would pop the whole scene.
+ */
+export function useLiveBackdrop(): void {
+  useEffect(() => {
+    liveBackdrops++;
+    document.body.classList.remove("backdrop-still");
+    return () => {
+      liveBackdrops--;
+      if (liveBackdrops === 0) document.body.classList.add("backdrop-still");
+    };
+  }, []);
+}
+
+/**
  * While `active`, hold the document to the strip of screen the on-screen
  * keyboard leaves visible.
  *

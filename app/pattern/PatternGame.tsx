@@ -19,7 +19,8 @@ import {
   submitBest,
 } from "@/lib/storage";
 
-const ROUNDS = 14;
+// One per entry in `plans` (roundPlan) — keep the two in step.
+const ROUNDS = 11;
 const SURVIVAL_CAP = 100;
 const LIVES = 3;
 
@@ -45,19 +46,15 @@ interface Generated {
   /** One label per gap between terms (last one leads into the "?"), drawn
       between the boxes on a miss so the rule is *visible*, not just stated. */
   steps?: string[];
-  /** Interleaved sequences: tint alternating terms to expose the weave. */
-  weave?: boolean;
 }
 
 type PatternKind =
   | "shapeCycle"
   | "arithmetic"
-  | "repeatDigits"
   | "letterSkip"
   | "geometric"
   | "rotation"
   | "secondDiff"
-  | "interleave"
   | "letterGrow";
 
 const num = (n: number): Term => ({ text: String(n) });
@@ -97,26 +94,6 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
       wrongs: [num(ans + d), num(ans - 1), num(ans + 1), num(a + 3 * d)],
       rule: { k: "step", token: step },
       steps: Array(4).fill(step),
-    };
-  },
-
-  /** 1, 22, 333, 4444 → 55555. */
-  repeatDigits(rng) {
-    const start = randInt(rng, 1, 5);
-    const terms = [0, 1, 2, 3].map((i) => ({
-      text: String(start + i).repeat(i + 1),
-    }));
-    const ansDigit = start + 4;
-    return {
-      terms,
-      answer: { text: String(ansDigit).repeat(5) },
-      wrongs: [
-        { text: String(ansDigit).repeat(4) },
-        { text: String(ansDigit).repeat(6) },
-        { text: String(Math.min(9, ansDigit + 1)).repeat(5) },
-        { text: String(ansDigit - 1).repeat(5) },
-      ],
-      rule: { k: "repeatDigits" },
     };
   },
 
@@ -160,7 +137,10 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
     const start = randInt(rng, 0, 7) * 45;
     const degs = [0, 1, 2, 3].map((i) => start + i * step);
     const ansDeg = start + 4 * step;
-    const arrow = (deg: number): Term => ({ glyph: "➤", deg });
+    // Same glyph Signal Rush uses, for the same reason: one symmetric arrow
+    // rotated stays identical in size and weight at every angle, where the
+    // asymmetric ➤ arrowhead reads as a different shape at 90° and 180°.
+    const arrow = (deg: number): Term => ({ glyph: "↑", deg });
     const wrongDegs = [ansDeg - step, ansDeg + 180, ansDeg + step].filter(
       (d) => termKey(arrow(d)) !== termKey(arrow(ansDeg))
     );
@@ -191,23 +171,6 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
     };
   },
 
-  /** Two sequences woven together: 1, 10, 3, 20, 5 → 30. */
-  interleave(rng) {
-    const a = randInt(rng, 1, 9);
-    const d = randInt(rng, 1, 5);
-    const b = randInt(rng, 10, 30);
-    const e = randInt(rng, 3, 10);
-    const terms = [num(a), num(b), num(a + d), num(b + e), num(a + 2 * d)];
-    const ans = b + 2 * e;
-    return {
-      terms,
-      answer: num(ans),
-      wrongs: [num(a + 3 * d), num(ans + d), num(ans - e), num(ans + 1)],
-      rule: { k: "interleave", a: d, b: e },
-      weave: true,
-    };
-  },
-
   /** Gaps that grow by one letter each time: A, B, D, G, K → P. */
   letterGrow(rng) {
     const start = randInt(rng, 0, 10);
@@ -233,24 +196,21 @@ function roundPlan(i: number): { kind: PatternKind; duration: number } {
   const plans: { kind: PatternKind; duration: number }[] = [
     { kind: "shapeCycle", duration: 8 },
     { kind: "arithmetic", duration: 8 },
-    { kind: "repeatDigits", duration: 8 },
     { kind: "arithmetic", duration: 7.5 },
     { kind: "letterSkip", duration: 9 },
     { kind: "geometric", duration: 8 },
     { kind: "rotation", duration: 8 },
     { kind: "secondDiff", duration: 10 },
-    { kind: "interleave", duration: 11 },
     { kind: "letterGrow", duration: 10 },
     { kind: "geometric", duration: 7 },
     { kind: "rotation", duration: 7.5 },
     { kind: "secondDiff", duration: 9 },
-    { kind: "interleave", duration: 10 },
   ];
   if (i < plans.length) return plans[i];
   // Survival past the daily's 14: cycle the four hardest rule types forever,
   // solve time grinding down to a floor.
   const laps = i - plans.length;
-  const hard: PatternKind[] = ["secondDiff", "interleave", "letterGrow", "geometric"];
+  const hard: PatternKind[] = ["secondDiff", "letterGrow", "geometric"];
   return {
     kind: hard[laps % hard.length],
     duration: Math.max(5.5, 10 - laps * 0.3),
@@ -264,7 +224,6 @@ interface PatternRound {
   duration: number;
   rule: RuleSpec;
   steps?: string[];
-  weave?: boolean;
 }
 
 function generateRound(rng: Rng, i: number): PatternRound {
@@ -303,7 +262,6 @@ function generateRound(rng: Rng, i: number): PatternRound {
     duration: plan.duration,
     rule: g.rule,
     steps: g.steps,
-    weave: g.weave,
   };
 }
 
@@ -542,8 +500,7 @@ export function PatternGame() {
       </div>
 
       {/* The sequence. On a miss the rule is drawn ON the pattern: step
-          labels appear between the boxes (and interleaved runs get their
-          two woven threads tinted apart). */}
+          labels appear between the boxes. */}
       <div className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-line bg-panel p-5 shadow-chunk">
         {/* Always one row. The tiles flex to share the row's width equally
             (capped at the desktop size), so any count of terms — and any glyph,
@@ -552,13 +509,7 @@ export function PatternGame() {
           {r?.terms.map((term, i) => (
             <Fragment key={i}>
               <span
-                className={`flex aspect-square min-w-0 max-w-14 flex-1 items-center justify-center overflow-hidden rounded-xl border-2 bg-panel2 px-1 font-display text-base sm:text-xl ${
-                  revealRule && r.weave
-                    ? i % 2 === 0
-                      ? "border-sky text-sky"
-                      : "border-coral text-coral"
-                    : "border-line"
-                }`}
+                className="flex aspect-square min-w-0 max-w-14 flex-1 items-center justify-center overflow-hidden rounded-xl border-2 border-line bg-panel2 px-1 font-display text-base sm:text-xl"
               >
                 <TermView term={term} />
               </span>
@@ -613,7 +564,6 @@ export function PatternGame() {
         ))}
       </div>
 
-      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }

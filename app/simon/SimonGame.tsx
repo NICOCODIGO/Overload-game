@@ -34,17 +34,26 @@ const LIVES = 3;
 // Survival's practical "endless": 3 lives at sub-second timers never get
 // close, and finishing it is a legend-tier RUN COMPLETE.
 const SURVIVAL_CAP = 150;
+/** How long "GET READY TO TAP…" holds before the real command lands. Long
+    enough to read and to tempt an itchy finger, short enough that the round
+    never reads as dead air. The countdown is only armed once the hold ends,
+    so this costs the player no answer time. */
+const FEINT_MS = 700;
 
 interface Command {
   simonSays: boolean;
-  /** color = match the button's color; label = match the word printed on it;
-      wait = bait — any tap is an elimination. */
-  kind: "color" | "label" | "wait";
+  /** color = match the button's color; label = match the word printed on it. */
+  kind: "color" | "label";
   target: SimonColor;
   /** labels[i] is the word printed on button i (buttons stay in COLORS order).
       Identity for rounds 1–4, a derangement from round 5 (the Stroop trap). */
   labels: SimonColor[];
   duration: number;
+  /** Opens on "GET READY TO TAP…", then the real command lands. Tapping during
+      the hold is an elimination, so the round tests impulse control and *then*
+      reaction — where the old version asked the player to sit still and do
+      nothing at all for the whole timer. */
+  feint?: boolean;
 }
 
 function generateCommands(rng: Rng, total: number, survival: boolean): Command[] {
@@ -61,43 +70,37 @@ function generateCommands(rng: Rng, total: number, survival: boolean): Command[]
     const scrambled = r >= 4;
     const labels = scrambled ? derange(rng, COLORS) : [...COLORS];
 
-    // Idle trap: "SIMON SAYS GET READY…" — the only correct move is stillness.
-    if (r >= 7 && rng() < 0.12) {
-      commands.push({
-        simonSays: true,
-        kind: "wait",
-        target: "red",
-        labels,
-        duration: duration + 0.4,
-      });
-      continue;
-    }
-
+    // Feint: opens on "GET READY TO TAP…" before the command shows.
+    const feint = r >= 7 && rng() < 0.12;
+    const says = rng() < 0.62;
     const kind: "color" | "label" = scrambled
       ? stroopFlip++ % 2 === 0
         ? "color"
         : "label"
       : "color";
     commands.push({
-      simonSays: rng() < 0.62,
+      // A feint always follows through. The hold is the trap, so what lands
+      // after it has to be a command the player is required to answer —
+      // otherwise the round has two "do nothing" answers and no tension.
+      simonSays: feint || says,
       kind,
       target: pick(rng, COLORS),
       labels,
       duration,
+      feint,
     });
   }
   return commands;
 }
 
 function commandText(cmd: Command, t: T): string {
-  if (cmd.kind === "wait") return t.play.getReady;
   const color = t.play.colors[cmd.target];
   return cmd.kind === "label"
     ? t.play.tapWord(color)
     : t.play.tapButton(color);
 }
 
-type Phase = "intro" | "show" | "feedback" | "result";
+type Phase = "intro" | "ready" | "show" | "feedback" | "result";
 
 interface Feedback {
   ok: boolean;
@@ -181,7 +184,9 @@ export function SimonGame() {
         lockedRef.current = false;
         setRound(roundRef.current);
         setFeedback(null);
-        setPhase("show");
+        setPhase(
+          commandsRef.current[roundRef.current]?.feint ? "ready" : "show"
+        );
       }
     }, 750);
   }
@@ -190,7 +195,8 @@ export function SimonGame() {
     const cmd = commandsRef.current[roundRef.current];
     if (!cmd || lockedRef.current) return;
     sfx.tap();
-    if (cmd.kind === "wait") {
+    // Still holding on "GET READY TO TAP…" — the command hasn't landed yet.
+    if (phase === "ready") {
       advance(false, t.fb.neverTap);
       return;
     }
@@ -225,8 +231,18 @@ export function SimonGame() {
     setFeedback(null);
     setNewBest(false);
     setSurvived(false);
-    setPhase("show");
+    setPhase(cmds[0]?.feint ? "ready" : "show");
   }
+
+  // Feint rounds hold on "GET READY TO TAP…" first. The countdown isn't armed
+  // until this ends and the "show" effect below takes over, so the hold never
+  // eats into the player's answer time.
+  useEffect(() => {
+    if (phase !== "ready") return;
+    sfx.reveal();
+    const id = window.setTimeout(() => setPhase("show"), FEINT_MS);
+    return () => window.clearTimeout(id);
+  }, [phase, round]);
 
   // Each time a round is shown, arm the countdown.
   useEffect(() => {
@@ -234,10 +250,9 @@ export function SimonGame() {
     const cmd = commandsRef.current[roundRef.current];
     sfx.reveal();
     timer.start(cmd.duration, () => {
-      // Timer expiry is CORRECT when the move was to do nothing.
-      const shouldHold = !cmd.simonSays || cmd.kind === "wait";
-      if (shouldHold) {
-        advance(true, cmd.kind === "wait" ? t.fb.patience : t.fb.didntSayOk);
+      // Letting the clock run out is only correct when Simon didn't say.
+      if (!cmd.simonSays) {
+        advance(true, t.fb.didntSayOk);
       } else {
         advance(false, t.fb.tooSlow);
       }
@@ -245,9 +260,10 @@ export function SimonGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, round]);
 
-  // Desktop: keys 1–4 map to the four buttons.
+  // Desktop: keys 1–4 map to the four buttons. Live during the feint hold too,
+  // or a keyboard player could mash through it unpunished.
   useEffect(() => {
-    if (phase !== "show") return;
+    if (phase !== "show" && phase !== "ready") return;
     const onKey = (e: KeyboardEvent) => {
       const idx = ["1", "2", "3", "4"].indexOf(e.key);
       if (idx >= 0) handleTap(idx);
@@ -293,7 +309,12 @@ export function SimonGame() {
         <Lives lives={lives} />
       </div>
 
-      <TimerBar progress={phase === "show" ? timer.progress : 0} />
+      {/* Full (not empty) during the feint — the clock hasn't started yet. */}
+      <TimerBar
+        progress={
+          phase === "show" ? timer.progress : phase === "ready" ? 1 : 0
+        }
+      />
 
       {/* Command card */}
       <div className="relative flex min-h-28 flex-col items-center justify-center rounded-2xl border-2 border-line bg-panel p-4 text-center shadow-chunk sm:min-h-36 sm:p-6">
@@ -307,16 +328,35 @@ export function SimonGame() {
           </p>
         ) : (
           cmd && (
-            <>
+            /* The stamp is positioned against this wrapper, not the card, so
+               it tracks the command text however that text wraps. */
+            <div className="relative">
               {cmd.simonSays && (
-                <span className="animate-stamp mb-2 inline-block rounded border-2 border-lemon px-3 py-1 font-display text-sm text-lemon">
-                  {t.play.simonSays}
+                /* Out of flow on purpose: in flow it took real height and
+                   shoved the command down, so the line moved every time the
+                   stamp appeared. Now the text holds its place and the stamp
+                   lands across the top of it.
+
+                   Two spans because the animation owns `transform` — putting
+                   the centering translate on the same element would let
+                   stamp-in overwrite it (and `both` would keep it overwritten
+                   after the animation ends). Outer positions, inner animates. */
+                /* -translate-y is the overlap dial, as a % of the stamp's own
+                   height: 100% sits it flush on the text's top edge, 50% would
+                   put its middle on that edge. Kept at 100% so it never covers
+                   a glyph — the word it used to land on ("YELLOW", "RED") is
+                   the one the player has to read to answer, on a timed round
+                   that now costs a life to get wrong. */
+                <span className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full">
+                  <span className="animate-stamp inline-block whitespace-nowrap rounded border-2 border-lemon bg-panel px-3 py-1 font-display text-sm text-lemon shadow-chunk-sm">
+                    {t.play.simonSays}
+                  </span>
                 </span>
               )}
               <p className="font-display text-2xl leading-snug" key={round}>
-                {commandText(cmd, t)}
+                {phase === "ready" ? t.play.getReady : commandText(cmd, t)}
               </p>
-            </>
+            </div>
           )
         )}
       </div>
@@ -331,8 +371,10 @@ export function SimonGame() {
             <button
               key={color}
               type="button"
-              disabled={phase !== "show"}
-              onPointerDown={() => phase === "show" && handleTap(i)}
+              disabled={phase !== "show" && phase !== "ready"}
+              onPointerDown={() =>
+                (phase === "show" || phase === "ready") && handleTap(i)
+              }
               className={`${BUTTON_BG[color]} h-20 rounded-2xl border-2 border-black/40 font-display text-2xl shadow-chunk transition-transform active:translate-y-1 active:shadow-none disabled:opacity-60 sm:h-28 ${
                 color === "yellow" || color === "green"
                   ? "text-ink"
@@ -346,7 +388,6 @@ export function SimonGame() {
         })}
       </div>
 
-      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }

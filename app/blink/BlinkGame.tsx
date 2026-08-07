@@ -464,7 +464,6 @@ export function BlinkGame() {
         )}
       </div>
 
-      <p className="text-center text-xs text-fog">{g.hint}</p>
     </div>
   );
 }

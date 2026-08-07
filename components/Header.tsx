@@ -4,21 +4,17 @@ import Link from "next/link";
 import { unlockAudio, toggleMuted } from "@/lib/audio";
 import { getStreak } from "@/lib/storage";
 import { useClientValue, useMuted } from "@/lib/hooks";
-import { cycleLang, useLang, useSyncHtmlLang, useT } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { PixelIcon } from "./PixelIcon";
 
 /**
- * Slim full-width status bar: logo hard left (and the way home), language +
- * streak + sound hard right. Game switching lives on the arcade floor.
+ * Slim full-width status bar: logo hard left (and the way home), streak +
+ * sound hard right. Game switching lives on the arcade floor.
  */
 export function Header() {
   const muted = useMuted();
-  const lang = useLang();
   const t = useT();
   const streak = useClientValue(getStreak, 0);
-  // The document is prerendered as lang="en" — put the stored choice back on
-  // <html> so screen readers and hyphenation follow the player, not the build.
-  useSyncHtmlLang();
 
   return (
     <header className="sticky top-0 z-40 border-b-2 border-line bg-ink/90 backdrop-blur">
@@ -50,16 +46,6 @@ export function Header() {
               </span>
             </span>
           )}
-
-          <button
-            type="button"
-            onClick={cycleLang}
-            aria-label={t.changeLang}
-            className="flex h-11 items-center gap-2 rounded-lg border-2 border-line bg-panel px-3 font-display text-sm text-paper shadow-chunk-sm transition-transform hover:bg-panel2 active:translate-y-0.5 active:shadow-none"
-          >
-            <PixelIcon name="globe" size={18} />
-            {lang.toUpperCase()}
-          </button>
 
           <button
             type="button"

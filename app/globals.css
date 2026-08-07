@@ -42,19 +42,225 @@ body {
   background: var(--color-ink);
   color: var(--color-paper);
   font-family: var(--font-sans);
-  /* Subtle arcade scanline texture */
-  background-image: radial-gradient(
-      ellipse 80% 50% at 50% -10%,
-      rgb(79 60 190 / 0.35),
-      transparent
+  /* Subtle arcade scanline texture. There used to be a purple radial glow
+     stacked on top of this, anchored to the top of the *document* — which is
+     why it sat as a bright band over the masthead and vanished the moment you
+     scrolled. The grid backdrop is the atmosphere now, so the glow went. */
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgb(0 0 0 / 0.07) 3px,
+    rgb(0 0 0 / 0.07) 4px
+  );
+}
+
+/* No scrollbar anywhere. `scrollbar-width` covers Firefox and Chromium 121+;
+   the ::-webkit rule covers Safari and older Chromium. Scrolling itself is
+   untouched — wheel, trackpad, touch, keyboard and the scroll position all
+   behave normally, there is just nothing drawn. The cost is that a long page
+   gives no visual cue that more exists below, which on the arcade menu is the
+   only place it matters. */
+html {
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------
+   Synthwave grid backdrop (components/GridBackdrop.tsx)
+
+   Two planes tipped almost flat in a shared perspective — a floor below and a
+   ceiling above — scrolling toward the viewer. Sits at z-index -1: negative
+   descendants paint above the parent's background but below in-flow content,
+   so the grid lands over the body's scanlines and under everything that
+   matters. Nothing here touches html/body sizing — `body.kb-fit` is already
+   fighting for that and would win.
+
+   THE RULE THAT MATTERS: the vanishing line sits at perspective-origin — the
+   viewport's vertical middle. A floor whose box-centre drifts ABOVE that line
+   inverts: its near rows project upward instead of down, the plane collapses
+   into a degenerate sliver, and you get flicker or nothing at all. Centre
+   position is `bottom + 100% - height/2`, so RAISING height moves the centre
+   UP and can cross the line on its own. That is why --grid-eye exists and why
+   the offsets below are computed from it instead of typed in by hand.
+   ------------------------------------------------------------------------ */
+.backdrop {
+  /* Line spacing AND the animation's travel distance — they read the same
+     variable so the loop can never desync. */
+  --grid-tile: 84px;
+  /* Line thickness, and the single control on horizon shimmer.
+     Perspective shrinks a line by the same factor it shrinks everything else:
+     at the far edge of a 190% plane that factor is ~0.33, so a 2px line lands
+     at 0.66px. Below 1px there is no way to draw it honestly — CSS has no
+     mipmapping — so each line's coverage snaps between pixels as the plane
+     slides, and the whole back of the grid crawls. 4px keeps it at ~1.3px
+     even at the very back. Raise this before anything else if shimmer
+     returns; never drop it below 3px at this plane depth. */
+  --grid-line: 4px;
+  /* Time to travel one tile. Lower is faster. Both planes read it so they can
+     never drift out of step with each other. */
+  --grid-speed: 6s;
+  /* How far back each plane reaches. The far edge approaches the horizon
+     asymptotically, so past ~150% this buys almost nothing. */
+  --grid-h: 190%;
+  /* How far the floor's centre sits below the viewport middle (ceiling: above
+     it). Must stay comfortably positive — see the rule above. Bigger drops
+     the grid lower and shows less of it; smaller lifts it toward the horizon
+     and, at zero, breaks it. */
+  --grid-eye: 16%;
+  /* Where the horizon bars sit, measured from the viewport middle.
+
+     This is now pinned to the MASK CUTOFF, not to the plane's far edge: the
+     grid is deliberately cut off short of the vanishing point, because that
+     last stretch is where lines shrink past a pixel and start to crawl no
+     matter how thick they are. The bar is drawn exactly where the grid stops,
+     so the cut reads as a lit horizon instead of as a missing back half — and
+     the horizon sitting nearer is what makes the space read as closer.
+
+     The two numbers are a pair. Mask cutoff → where the bar goes:
+       64% → 8.7%   68% → 7.5%   72% → 6.5%   76% → 5.7%   80% → 5.0%
+     Later cutoffs pull the bar toward the middle but walk back into the
+     shimmer; 72% is the last comfortable stop. */
+  --grid-horizon: 6.5%;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  perspective: 420px;
+  perspective-origin: 50% 50%;
+}
+
+.backdrop__plane {
+  position: absolute;
+  left: -50%;
+  width: 200%;
+  height: var(--grid-h);
+  background-image: linear-gradient(
+      to bottom,
+      var(--color-coral) var(--grid-line),
+      transparent var(--grid-line)
     ),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0px,
-      transparent 3px,
-      rgb(0 0 0 / 0.07) 3px,
-      rgb(0 0 0 / 0.07) 4px
+    linear-gradient(
+      to right,
+      var(--color-coral) var(--grid-line),
+      transparent var(--grid-line)
     );
+  background-size: var(--grid-tile) var(--grid-tile);
+  /* Low enough that paper-on-ink text keeps its contrast. Swap both gradient
+     colors to --color-sky for the cooler, bluer read. */
+  opacity: 0.16;
+  /* Animating transform (not background-position) keeps this on the
+     compositor — it must not steal frames from the rAF countdown. */
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* The horizon: a lit edge where the grid ends, rather than letting it dissolve
+   into nothing. Positioned to land on each plane's far edge — that edge sits
+   --grid-horizon from the viewport middle, so the two numbers move together.
+   Raise --grid-horizon and the lines drift apart, away from the grid; lower it
+   and they cross into it. */
+.backdrop__horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--color-coral);
+  opacity: 0.42;
+  /* Three stacked shadows: a tight core, a mid bloom, a wide haze. That stack
+     is what reads as neon rather than as a plain rule — so when dimming this,
+     scale all three together. Killing the wide haze alone makes it look like
+     a drawn line rather than a soft light. */
+  box-shadow:
+    0 0 3px 0 rgb(255 93 115 / 0.65),
+    0 0 10px 1px rgb(255 93 115 / 0.3),
+    0 0 30px 7px rgb(255 93 115 / 0.12);
+}
+
+.backdrop__horizon--floor {
+  top: calc(50% + var(--grid-horizon));
+}
+
+.backdrop__horizon--ceil {
+  top: calc(50% - var(--grid-horizon));
+}
+
+/* Each plane travels exactly one tile, so the loop is seamless.
+   ---------------------------------------------------------------------
+   The mask cutoff is a flicker control, not just a look. A plane tipped to
+   85° compresses its far end without limit, so past a certain point the grid
+   lines land thinner than one pixel. There is no mipmapping in CSS, so those
+   sub-pixel lines alias — and because the plane is sliding, the aliasing
+   crawls, which reads as a shimmer along the horizon. Fading the lines out
+   BEFORE they reach that zone is the fix. 78% is inside the safe range;
+   pushing it toward 90% brings the shimmer straight back.
+   Depth in the remaining gap comes from the haze below, not from lines. */
+.backdrop__floor {
+  /* Derived, never hand-typed: keeps the centre --grid-eye below the middle
+     no matter what --grid-h is set to. Currently 50% - 16% - 75% = -41%. */
+  bottom: calc(50% - var(--grid-eye) - var(--grid-h) / 2);
+  transform: rotateX(85deg) translateY(0);
+  animation: backdrop-floor var(--grid-speed) linear infinite;
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgb(0 0 0 / 0.8) 45%,
+    transparent 72%
+  );
+  mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgb(0 0 0 / 0.8) 45%,
+    transparent 72%
+  );
+}
+
+.backdrop__ceil {
+  /* Mirror of the floor — the symmetry falls out of using the same formula. */
+  top: calc(50% - var(--grid-eye) - var(--grid-h) / 2);
+  transform: rotateX(-85deg) translateY(0);
+  animation: backdrop-ceil var(--grid-speed) linear infinite;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    rgb(0 0 0 / 0.8) 45%,
+    transparent 72%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    rgb(0 0 0 / 0.8) 45%,
+    transparent 72%
+  );
+}
+
+
+@keyframes backdrop-floor {
+  from { transform: rotateX(85deg) translateY(0); }
+  to   { transform: rotateX(85deg) translateY(var(--grid-tile)); }
+}
+
+@keyframes backdrop-ceil {
+  from { transform: rotateX(-85deg) translateY(0); }
+  to   { transform: rotateX(-85deg) translateY(var(--grid-tile)); }
+}
+
+/* Mid-round: hold the grid exactly where it is. Pausing rather than removing
+   the animation means it resumes from the same phase on the result screen. */
+body.backdrop-still .backdrop__plane {
+  animation-play-state: paused;
+}
+
+/* Landscape phones: pull the vanishing point in so the grid still reads as a
+   corridor instead of a flat smear. */
+@media (max-height: 350px) {
+  .backdrop {
+    perspective: 210px;
+  }
 }
 
 /* Visible keyboard focus everywhere */
