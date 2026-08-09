@@ -76,6 +76,13 @@ export function SequenceGame() {
   const [gap, setGap] = useState<Gap | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
   const [flashKey, setFlashKey] = useState(0);
+  /** The direction that just registered, so the d-pad can echo it. A keyboard
+      or swipe input has no `:active` state of its own — without this, keying a
+      code blind gives no confirmation that the right arrow was even read.
+      `n` bumps on every press so a repeated direction restarts the animation. */
+  const [press, setPress] = useState<{ dir: Dir; n: number; ok: boolean } | null>(
+    null
+  );
   const [newBest, setNewBest] = useState(false);
   const [streak, setStreak] = useState(0);
   const [survived, setSurvived] = useState(false);
@@ -203,7 +210,9 @@ export function SequenceGame() {
   function handleDir(dir: Dir) {
     if (phaseRef.current !== "input") return;
     const code = seqsRef.current[levelRef.current - 1];
-    if (dir === code[posRef.current]) {
+    const ok = dir === code[posRef.current];
+    setPress((p) => ({ dir, n: (p?.n ?? 0) + 1, ok }));
+    if (ok) {
       posRef.current += 1;
       setPos(posRef.current);
       sfx.good();
@@ -413,15 +422,15 @@ export function SequenceGame() {
           tightened back up at sm+, where the keyboard does the real work. */}
       <div className="mx-auto grid w-60 grid-cols-3 gap-3 sm:w-48 sm:gap-2">
         <span />
-        <DPadButton dir="up" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.up)} />
+        <DPadButton dir="up" onDir={handleDir} press={press} label={t.a11y.inputDir(t.a11y.dirs.up)} />
         <span />
-        <DPadButton dir="left" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.left)} />
+        <DPadButton dir="left" onDir={handleDir} press={press} label={t.a11y.inputDir(t.a11y.dirs.left)} />
         <span className="flex items-center justify-center text-xs text-line">
           ✦
         </span>
-        <DPadButton dir="right" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.right)} />
+        <DPadButton dir="right" onDir={handleDir} press={press} label={t.a11y.inputDir(t.a11y.dirs.right)} />
         <span />
-        <DPadButton dir="down" onDir={handleDir} label={t.a11y.inputDir(t.a11y.dirs.down)} />
+        <DPadButton dir="down" onDir={handleDir} press={press} label={t.a11y.inputDir(t.a11y.dirs.down)} />
         <span />
       </div>
     </div>
@@ -431,12 +440,16 @@ export function SequenceGame() {
 function DPadButton({
   dir,
   onDir,
+  press,
   label,
 }: {
   dir: Dir;
   onDir: (d: Dir) => void;
+  /** The whole-game press state; the button lights only when it's its turn. */
+  press: { dir: Dir; n: number; ok: boolean } | null;
   label: string;
 }) {
+  const lit = press?.dir === dir ? press : null;
   return (
     <button
       type="button"
@@ -445,8 +458,21 @@ function DPadButton({
         e.preventDefault();
         onDir(dir);
       }}
-      className="flex h-16 items-center justify-center rounded-lg border-2 border-line bg-panel2 font-display text-xl text-paper shadow-chunk-sm transition-transform active:translate-y-0.5 active:shadow-none sm:h-14"
+      className="relative flex h-16 items-center justify-center rounded-lg border-2 border-line bg-panel2 font-display text-xl text-paper shadow-chunk-sm transition-transform active:translate-y-0.5 active:shadow-none sm:h-14"
     >
+      {lit && (
+        // Fill and edge both live on the overlay so they fade together — a
+        // border on the button itself would still be lit at the next press.
+        // Keyed on the press count so hammering one direction re-fires the
+        // animation instead of sitting finished at opacity 0.
+        <span
+          key={lit.n}
+          aria-hidden
+          className={`animate-key-flash absolute -inset-0.5 rounded-lg border-2 ${
+            lit.ok ? "border-mint bg-mint/50" : "border-coral bg-coral/50"
+          }`}
+        />
+      )}
       <Arrow dir={dir} />
     </button>
   );

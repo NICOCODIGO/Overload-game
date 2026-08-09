@@ -1,6 +1,16 @@
 /**
  * Word pools for Panic Type. Daily prompts are drawn from these with the
  * seeded RNG, escalating short word → word pair → full phrase.
+ *
+ * Pool size is a *freshness* budget, not decoration. A daily takes 6 short
+ * words (rounds 1-6) and 6 medium (rounds 7-10 plus the two pairs), so a given
+ * word surfaces every `size / 6` days. At 46 words that was once a week —
+ * players recognised specific words and the opening felt scripted. At 120 it's
+ * once every twenty days, and consecutive dailies rarely collide.
+ *
+ * Keep both lists at 120+. Short words stay 2-5 characters, medium 6-10
+ * (`gizmo` predates the rule) — outside that the difficulty ramp stops
+ * meaning anything.
  */
 
 export const SHORT_WORDS = [
@@ -9,6 +19,15 @@ export const SHORT_WORDS = [
   "tilt", "vex", "wave", "yell", "zip", "buzz", "clap", "dive", "echo",
   "flux", "glow", "hype", "iris", "jinx", "kick", "loop", "mode", "neon",
   "opal", "pace", "quiz", "risk", "spin", "trap", "urge", "volt", "warp",
+  "amp", "blip", "chip", "drop", "edge", "fuse", "gear", "haze", "idle",
+  "jump", "kite", "lime", "mesh", "node", "oath", "ping", "quest", "rift",
+  "surge", "turbo", "unit", "vibe", "wire", "zone", "arc", "byte", "cyan",
+  "dusk", "ember", "flare", "glide", "hover", "ion", "jazz", "knot", "lens",
+  "mark", "nerve", "orbit", "prism", "quark", "radar", "spark", "tempo",
+  "ultra", "vault", "whir", "zinc", "axis", "blaze", "crash", "drift",
+  "evade", "forge", "gust", "hack", "ink", "jab", "kilo", "laser", "motor",
+  "noise", "omen", "pulse", "quirk", "relay", "servo", "tonic", "user",
+  "viral", "watt", "xenon", "yield", "zoom",
 ] as const;
 
 export const MEDIUM_WORDS = [
@@ -19,6 +38,19 @@ export const MEDIUM_WORDS = [
   "adrenaline", "backfire", "circuitry", "detonate", "electric", "flashback",
   "gauntlet", "hyperdrive", "ignition", "juggernaut", "overclock", "pressure",
   "quicksand", "rampage", "shockwave", "turbulent", "ultimatum", "voltage",
+  "avalanche", "bulldoze", "chaotic", "dynamite", "engineer", "fireball",
+  "gridlock", "hijack", "inferno", "jitters", "keystone", "lightning",
+  "momentum", "nitrogen", "obstacle", "plummet", "quantum", "reboot",
+  "stampede", "tailspin", "unstable", "velocity", "wavelength", "whirlwind",
+  "zeppelin", "zigzag", "amplify", "blizzard", "catapult", "demolish",
+  "earthquake", "frequency", "gyroscope", "hurricane", "interface", "joystick",
+  "knockout", "landslide", "magnitude", "neutron", "overdrive", "plasma",
+  "quiver", "rocket", "skyline", "throttle", "upgrade", "vertigo", "wildfire",
+  "zenith", "zombie", "airlock", "booster", "cyclone", "dropkick", "eruption",
+  "firewall", "gravity", "hologram", "implode", "jetpack", "keyboard",
+  "lockdown", "meltdown", "nosedive", "octagon", "parallax", "quagmire",
+  "radiant", "sabotage", "tremor", "uprising", "vortex", "windmill",
+  "wrecking", "zodiac",
 ] as const;
 
 /** The arcade's own voice — self-aware jabs at the player and the clock. */

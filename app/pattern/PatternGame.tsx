@@ -26,13 +26,9 @@ const LIVES = 3;
 
 /** A hit needs no explanation — just enough beat to register the ring. */
 const HIT_GAP_MS = 650;
-/** A miss puts the rule on screen. This is the *ceiling* on reading time, not
-    the wait: the player can dismiss it the moment they've got it. Long enough
-    that a slow reader who never taps still finishes the sentence. */
+/** A miss puts the rule on screen and holds it there. The gap is fixed and
+    unskippable, so this has to clear the slowest rule sentence in one read. */
 const MISS_GAP_MS = 5200;
-/** Taps are ignored this long after a miss so the second half of an impatient
-    double-tap on an option can't blow past the explanation it just earned. */
-const SKIP_ARM_MS = 750;
 
 /** A sequence term: plain text, or a glyph at a rotation (arrow patterns). */
 type Term = { text: string } | { glyph: string; deg: number };
@@ -316,9 +312,6 @@ export function PatternGame() {
   const [round, setRound] = useState(0);
   const [lives, setLives] = useState(LIVES);
   const [gap, setGap] = useState<Gap | null>(null);
-  /** The rule reveal is dismissible — but only once it has been up long enough
-      to be a deliberate "I've read it", never a stray tap. */
-  const [canSkip, setCanSkip] = useState(false);
   const [newBest, setNewBest] = useState(false);
   const [streak, setStreak] = useState(0);
   const [survived, setSurvived] = useState(false);
@@ -339,8 +332,6 @@ export function PatternGame() {
   const lockedRef = useRef(false);
   const phaseRef = useRef<Phase>("intro");
   const gapTimeoutRef = useRef(0);
-  const armTimeoutRef = useRef(0);
-  const canSkipRef = useRef(false);
   const timer = useCountdown();
 
   /** Score line, in the player's language. Derived from the raw score every
@@ -353,20 +344,9 @@ export function PatternGame() {
     setPhase(p);
   }
 
-  function setCanSkipSafe(v: boolean) {
-    canSkipRef.current = v;
-    setCanSkip(v);
-  }
-
-  function clearGapTimers() {
-    window.clearTimeout(gapTimeoutRef.current);
-    window.clearTimeout(armTimeoutRef.current);
-  }
-
   function finish(didSurvive: boolean) {
     timer.stop();
-    clearGapTimers();
-    setCanSkipSafe(false);
+    window.clearTimeout(gapTimeoutRef.current);
     const score = resultsRef.current.filter(Boolean).length;
     const emojis = resultsRef.current.map((r) => (r ? "✅" : "❌"));
     const display = fmt(score, modeRef.current);
@@ -386,13 +366,10 @@ export function PatternGame() {
     else sfx.gameOver();
   }
 
-  /** Leave the gap — on the auto-advance timer, or early because the player
-      said they're done reading. Idempotent: the phase check makes the second
-      caller (a tap that also bubbles, a key that also clicks) a no-op. */
+  /** Leave the gap when the reading timer runs out. */
   function leaveGap() {
     if (phaseRef.current !== "gap") return;
-    clearGapTimers();
-    setCanSkipSafe(false);
+    window.clearTimeout(gapTimeoutRef.current);
     if (livesRef.current <= 0) {
       finish(false);
     } else if (roundRef.current + 1 >= totalRef.current) {
@@ -418,18 +395,11 @@ export function PatternGame() {
     if (correct) sfx.success();
     else sfx.error();
 
-    // A miss lingers: the rule is on screen and deserves reading time. The
-    // timeout is the backstop — the player normally taps out of it sooner.
+    // A miss lingers: the rule is on screen and deserves reading time.
     gapTimeoutRef.current = window.setTimeout(
       leaveGap,
       correct ? HIT_GAP_MS : MISS_GAP_MS
     );
-    if (!correct) {
-      armTimeoutRef.current = window.setTimeout(
-        () => setCanSkipSafe(true),
-        SKIP_ARM_MS
-      );
-    }
   }
 
   function beginRound() {
@@ -461,27 +431,20 @@ export function PatternGame() {
     roundRef.current = 0;
     lockedRef.current = false;
     modeRef.current = m;
-    clearGapTimers();
+    window.clearTimeout(gapTimeoutRef.current);
     setMode(m);
     setLives(LIVES);
     setRound(0);
     setGap(null);
-    setCanSkipSafe(false);
     setNewBest(false);
     setSurvived(false);
     beginRound();
   }
 
-  // Desktop: keys 1–4 pick the four options; space/enter dismisses the rule.
+  // Desktop: keys 1–4 pick the four options. handlePick ignores anything
+  // outside the scan phase, so the gap needs no guard of its own.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (phaseRef.current === "gap") {
-        if (canSkipRef.current && (e.key === " " || e.key === "Enter")) {
-          e.preventDefault(); // don't also "click" a focused button
-          leaveGap();
-        }
-        return;
-      }
       const idx = ["1", "2", "3", "4"].indexOf(e.key);
       if (idx >= 0) handlePick(idx);
     };
@@ -490,8 +453,8 @@ export function PatternGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Clean up the gap timeouts if the player navigates away mid-run.
-  useEffect(() => () => clearGapTimers(), []);
+  // Clean up the gap timeout if the player navigates away mid-run.
+  useEffect(() => () => window.clearTimeout(gapTimeoutRef.current), []);
 
   if (phase === "intro") {
     return <IntroScreen game="pattern" format={fmt} onStart={startRun} />;
@@ -520,13 +483,7 @@ export function PatternGame() {
   const revealRule = phase === "gap" && gap !== null && !gap.ok;
 
   return (
-    // Anywhere-tap dismisses the rule reveal (once armed) — on a phone the
-    // thumb is nowhere near the button, and the button bubbles here harmlessly
-    // because leaveGap is idempotent.
-    <div
-      className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4"
-      onPointerDown={canSkip ? leaveGap : undefined}
-    >
+    <div className="flex flex-1 flex-col gap-2.5 py-2 sm:gap-4 sm:py-4">
       <GameTitle game="pattern" />
 
       <div className="flex items-center justify-between">

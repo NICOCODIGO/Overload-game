@@ -141,6 +141,18 @@ body.kb-fit {
   pointer-events: none;
 }
 
+/* Signal Rush: which direction just registered. Deliberately shorter than
+   flash-fade — at 0.55s per arrow on late levels, a half-second fade would
+   still be on screen when the next key lands and the two would smear. */
+@keyframes key-flash {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+.animate-key-flash {
+  animation: key-flash 0.26s ease-out both;
+  pointer-events: none;
+}
+
 @keyframes rise {
   0% { transform: translateY(14px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
@@ -315,5 +327,13 @@ body.kb-fit {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Exception: the d-pad key echo is a pure opacity fade with no movement, so
+     it triggers nothing vestibular — and it is the only confirmation a
+     keyboard player gets that their key registered. Collapsing it to 0.01ms
+     would delete the feedback rather than calm it. */
+  .animate-key-flash {
+    animation-duration: 0.26s !important;
   }
 }
