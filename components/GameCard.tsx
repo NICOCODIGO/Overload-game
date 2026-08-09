@@ -68,7 +68,7 @@ export function GameCard(props: GameCardProps) {
           </span>
         </span>
       ) : (
-        <span className="mt-1 font-pixel text-base text-fog/70">
+        <span className="mt-1 font-pixel text-base text-coral">
           {t.playToday}
         </span>
       )}
