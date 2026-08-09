@@ -443,7 +443,7 @@ const EN: Dict = {
     hands: {
       shortIs: "short & thick =",
       hour: "HOUR",
-      longIs: "· long arrow =",
+      longIs: "| long arrow =",
       minute: "MINUTE",
     },
     find: "FIND:",
