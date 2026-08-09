@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 28" width="880" height="28" role="presentation">
+  <defs>
+    <!-- Fades out at both ends so it reads as a light, not a ruled line. -->
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff5d73" stop-opacity="0"/>
+      <stop offset="0.18" stop-color="#ff5d73" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#ff5d73" stop-opacity="1"/>
+      <stop offset="0.82" stop-color="#ff5d73" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff5d73" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Bloom around the core, the same trick the in-game horizon bar uses:
+         a blurred copy under the sharp one is what reads as neon. -->
+    <filter id="bloom" x="-20%" y="-400%" width="140%" height="900%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#bloom)">
+    <rect x="0" y="13" width="880" height="2" fill="url(#beam)"/>
+    <!-- Arcade diamond on the centre line, in the lemon accent. -->
+    <rect x="434" y="8" width="12" height="12" fill="#ffd23f" transform="rotate(45 440 14)"/>
+  </g>
+</svg>

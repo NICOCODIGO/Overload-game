@@ -8,77 +8,92 @@ player worldwide gets the identical run — plus an endless **unlimited mode**
 (how long can you last?), scored by rounds survived.
 
 <!--
-  GALLERY — one clip per row, full width, so the play area is actually legible.
-  Files live in .github/demos/; see the README there for naming and sizing.
-  880 is GitHub's content width on desktop, and every clip is ~2557px native,
-  so nothing is being upscaled. GitHub shrinks them to fit on narrow screens.
+  GALLERY — one clip per game, full width, description underneath.
+  Clips live in .github/demos/ (see the README there for naming and sizing).
+  880 is GitHub's content width on desktop and the clips are ~2557px native,
+  so nothing is upscaled; GitHub shrinks them to fit on narrow screens.
 -->
 
 <p align="center">
-  <b>Simon Says</b><br>
-  <sub>obey only when Simon says</sub><br><br>
+  <b>SIMON SAYS</b> &nbsp;·&nbsp; <code>/simon</code><br><br>
   <img src=".github/demos/simon.gif" alt="Simon Says gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+30 commands, 3 lives. Only obey when the card is stamped SIMON SAYS. From round 5 the button labels lie (Stroop trap), and feint rounds open on GET READY TO TAP — move during the hold and you're out, wait it through and the real command lands.
+
 <p align="center">
-  <b>Signal Rush</b><br>
-  <sub>intercept and re-key the code</sub><br><br>
+  <b>SIGNAL RUSH</b> &nbsp;·&nbsp; <code>/sequence</code><br><br>
   <img src=".github/demos/sequence.gif" alt="Signal Rush gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+Intercept an arrow code and re-key it before the channel closes. Deep transmissions flash once, then go dark — input from memory. A wrong key resets the code and burns time.
+
 <p align="center">
-  <b>Panic Type</b><br>
-  <sub>type it exactly, fast</sub><br><br>
+  <b>PANIC TYPE</b> &nbsp;·&nbsp; <code>/typing</code><br><br>
   <img src=".github/demos/typing.gif" alt="Panic Type gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+20 prompts, short words escalating into punctuated phrases. Type them exactly. Typos flash red; the clock has no mercy. Score is prompts survived plus accuracy.
+
 <p align="center">
-  <b>Overclocked</b><br>
-  <sub>read the clock before it lies</sub><br><br>
+  <b>OVERCLOCKED</b> &nbsp;·&nbsp; <code>/clock</code><br><br>
   <img src=".github/demos/clock.gif" alt="Overclocked gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+Read the analog clock, tap the matching time — flip rounds reverse it, matching a digital time to a face. Numbers vanish, distractors become hand-swap traps, and the finale clocks spin, freeze, and disappear.
+
 <p align="center">
-  <b>Anomaly</b><br>
-  <sub>find the one that doesn't belong</sub><br><br>
+  <b>ANOMALY</b> &nbsp;·&nbsp; <code>/anomaly</code><br><br>
   <img src=".github/demos/anomaly.gif" alt="Anomaly gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+One glyph in a seeded crowd doesn't belong. Colour pops give way to odd-one-out emoji, then conjunction search, then near-identical character twins. Wrong taps burn time.
+
 <p align="center">
-  <b>Headcount</b><br>
-  <sub>count only what's asked</sub><br><br>
+  <b>HEADCOUNT</b> &nbsp;·&nbsp; <code>/count</code><br><br>
   <img src=".github/demos/count.gif" alt="Headcount gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+A mob of numbers and shapes in mixed colours, sizes, and spins — count only what the question asks for ("how many are mint?", "how many triangles?", "how many huge 7s?"). One keypad tap to answer.
+
 <p align="center">
-  <b>Next!</b><br>
-  <sub>crack the rule, pick what follows</sub><br><br>
+  <b>NEXT!</b> &nbsp;·&nbsp; <code>/pattern</code><br><br>
   <img src=".github/demos/pattern.gif" alt="Next! gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+Sequence completion: number runs, letter ladders, growing gaps, spinning arrows. The wrong options are the mistakes you were about to make — miss one and the rule is drawn onto the pattern itself.
+
 <p align="center">
-  <b>Scramble</b><br>
-  <sub>unscramble past the junk letters</sub><br><br>
+  <b>SCRAMBLE</b> &nbsp;·&nbsp; <code>/scramble</code><br><br>
   <img src=".github/demos/scramble.gif" alt="Scramble gameplay" width="880">
 </p>
 
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+Unscramble the hidden word from a pile of letter tiles — but decoys are mixed in. The hint disappears as you climb; one correct letter is locked in green to start you off.
+
 <p align="center">
-  <b>Blink</b><br>
-  <sub>spot what changed</sub><br><br>
+  <b>BLINK</b> &nbsp;·&nbsp; <code>/blink</code><br><br>
   <img src=".github/demos/blink.gif" alt="Blink gameplay" width="880">
 </p>
 
-| Route | Game | The stress |
-| --- | --- | --- |
-| `/simon` | **Simon Says** | 30 commands, 3 lives. Only obey when the card is stamped SIMON SAYS. From round 5 the button labels lie (Stroop trap), and feint rounds open on GET READY TO TAP — move during the hold and you're out, wait it through and the real command lands. |
-| `/sequence` | **Signal Rush** | Intercept an arrow code and re-key it before the channel closes. Deep transmissions flash once, then go dark — input from memory. Wrong key resets the code and burns time. |
-| `/typing` | **Panic Type** | 20 prompts, short words → punctuated phrases. Type them exactly. Typos flash red; the clock has no mercy. Score = prompts survived + accuracy. |
-| `/clock` | **Overclocked** | Read the analog clock, tap the matching time — flip rounds reverse it (match the digital time to a face). Numbers vanish, distractors become hand-swap traps, and the finale clocks spin, freeze, and disappear. |
-| `/anomaly` | **Anomaly** | Anomaly detection: one glyph in a seeded crowd doesn't belong. Color pops → emoji odd-one-out → conjunction search → near-identical character twins. Wrong taps burn time. |
-| `/count` | **Headcount** | A mob of numbers and shapes in mixed colors, sizes, and spins — count only what the question asks for ("how many are mint?", "how many triangles?", "how many huge 7s?"). One keypad tap to answer. |
-| `/pattern` | **Next!** | Sequence completion: number runs, letter ladders, growing gaps, spinning arrows. The wrong options are the mistakes you were about to make — miss one and the rule is drawn on the pattern itself. |
-| `/scramble` | **Scramble** | Unscramble the hidden word from a pile of letter tiles — but decoys are mixed in. The hint disappears as you climb; one correct letter is locked in green to start you off. |
-| `/blink` | **Blink** | Change blindness: the scene flashes, blinks, and flashes again with one difference. Tap it. Changes go from loud recolors to near-identical hue shifts. |
+<p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
+
+Change blindness: the scene flashes, blinks, and flashes again with one difference. Tap it. Changes go from loud recolours to near-identical hue shifts.
 
 Personal bests, daily results, and the daily streak live in `localStorage`.
 Results copy to the clipboard as share text, Wordle-style:
