@@ -98,54 +98,15 @@ Personal bests, daily results, and the daily streak live in `localStorage`.
 Results copy to the clipboard as share text, Wordle-style:
 
 
-
 ```
 Overload: Signal Rush #12 — Level 9 ⚡ — ✅✅✅✅✅✅✅✅❌ — beat me: https://…/sequence
 ```
 
-## Stack
+## About
 
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
-- Fully static (`output: "export"`) — no backend in v1. All persistence goes
-  through `lib/storage.ts`, so a future backend (accounts, leaderboards) swaps
-  one module, not the games.
-- Sounds are synthesized with the Web Audio API (`lib/audio.ts`) — no assets.
-  Mute toggle persists.
-- Mobile-first: touch/swipe/d-pad + on-screen keyboard everywhere; arrow keys,
-  WASD, and number keys on desktop. `prefers-reduced-motion` respected.
+- Fully static, no backend as of now, for now this is meant to be played in browser
+- Support For Mobile: touch/swipe/d-pad + on-screen keyboard everywhere; arrow keys,
+  WASD, and number keys on desktop.
 
-## Architecture
 
-```
-lib/
-  rng.ts          mulberry32 + xmur3 seeded RNG, shuffle, derangement
-  daily.ts        UTC daily number + per-game daily/practice seeds, speed ramp
-  storage.ts      localStorage: bests, daily results, streak, mute
-  audio.ts        Web Audio synth sfx + mute pub/sub
-  useCountdown.ts rAF countdown with penalty support (drives every game)
-  share.ts        share-text builder + clipboard
-  words.ts        word/phrase pools for Panic Type
-  hooks.ts        useClientValue (hydration-safe), useMuted, reduced motion
-components/
-  Header, GameCard, ArcadeGrid, IntroScreen, ResultScreen, TimerBar, Lives
-app/
-  globals.css     ALL design tokens (colors, fonts, shadows, animations)
-  simon/ sequence/ typing/ clock/ anomaly/ count/ pattern/ scramble/ blink/
-                  one server page (metadata) + one client game component each
-```
-
-## Develop
-
-```bash
-npm install
-npm run dev    # http://localhost:3000
-npm run lint
-npm run build  # static site → /out
-```
-
-## Deploy to AWS Amplify
-
-The repo ships an `amplify.yml`. Connect the repo in the Amplify console,
-accept the detected settings, and it deploys the static `/out` directory.
-Optionally set `NEXT_PUBLIC_SITE_URL` to your live URL so share links and
-Open Graph tags use the real domain.
