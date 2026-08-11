@@ -2,7 +2,7 @@
   <img src=".github/overload.svg" alt="OVERLOAD — the brain arcade" width="880">
 </p>
 
-<center><h2>No downloads, no ads, no sign-ups. Just fast, fun web games ready in one click</h2></center>
+<h2 align="center">No downloads, no ads, no sign-ups. Just fast, fun web games ready in one click</h2>
 
 
 
