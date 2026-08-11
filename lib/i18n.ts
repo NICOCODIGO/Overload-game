@@ -200,6 +200,8 @@ const EN_SHAPES: Record<string, string> = {
   "▲": "TRIANGLES",
   "★": "STARS",
   "◆": "DIAMONDS",
+  "⬢": "HEXAGONS",
+  "✚": "CROSSES",
 };
 
 function enCountQuestion(q: CountQuery): QuestionPart[] {

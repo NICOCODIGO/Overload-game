@@ -9,7 +9,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 <p align="center">
   <b>SIMON SAYS</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/simon.gif" alt="Simon Says gameplay" width="880">
+  <img src=".github/demos/SIMON2.gif" alt="Simon Says gameplay" width="880">
 </p>
 
 
@@ -20,7 +20,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>SIGNAL RUSH</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/sequence.gif" alt="Signal Rush gameplay" width="880">
+  <img src=".github/demos/SIGNALRUSH2.gif" alt="Signal Rush gameplay" width="880">
 </p>
 
 
@@ -29,7 +29,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>PANIC TYPE</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/typing.gif" alt="Panic Type gameplay" width="880">
+  <img src=".github/demos/PANICTYPE2.gif" alt="Panic Type gameplay" width="880">
 </p>
 
 
@@ -39,7 +39,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>OVERCLOCKED</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/clock.gif" alt="Overclocked gameplay" width="880">
+  <img src=".github/demos/OVERCLOCKED2.gif" alt="Overclocked gameplay" width="880">
 </p>
 
 <p align="center">Read the analog clock, tap the matching time — flip rounds reverse it, matching a digital time to a face. Numbers vanish, distractors become hand-swap traps, and the finale clocks spin, freeze, and disappear.</p>
@@ -48,7 +48,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>ANOMALY</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/anomaly.gif" alt="Anomaly gameplay" width="880">
+  <img src=".github/demos/ANOMALY2.gif" alt="Anomaly gameplay" width="880">
 </p>
 
 <p align="center">One glyph in a seeded crowd doesn't belong. Colour pops give way to odd-one-out emoji, then conjunction search, then near-identical character twins. Wrong taps burn time.</p>
@@ -57,7 +57,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>HEADCOUNT</b> &nbsp;&nbsp;<br><br>
-  <img src=".github/demos/count.gif" alt="Headcount gameplay" width="880">
+  <img src=".github/demos/HEADCOUNT2.gif" alt="Headcount gameplay" width="880">
 </p>
 
 <p align="center">A mob of numbers and shapes in mixed colours, sizes, and spins — count only what the question asks for ("how many are mint?", "how many triangles?", "how many huge 7s?"). One keypad tap to answer.</p>
@@ -67,7 +67,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>NEXT!</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/pattern.gif" alt="Next! gameplay" width="880">
+  <img src=".github/demos/NEXT2.gif" alt="Next! gameplay" width="880">
 </p>
 
 <p align="center">Sequence completion: number runs, letter ladders, growing gaps, spinning arrows. The wrong options are the mistakes you were about to make — miss one and the rule is drawn onto the pattern itself.</p>
@@ -76,7 +76,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>SCRAMBLE</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/scramble.gif" alt="Scramble gameplay" width="880">
+  <img src=".github/demos/SCRAMBLE2.gif" alt="Scramble gameplay" width="880">
 </p>
 
 
@@ -86,7 +86,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 <p align="center">
   <b>BLINK</b> &nbsp;&nbsp; <br><br>
-  <img src=".github/demos/blink.gif" alt="Blink gameplay" width="880">
+  <img src=".github/demos/BLINK2.gif" alt="Blink gameplay" width="880">
 </p>
 
 <p align="center">Change blindness: the scene flashes, blinks, and flashes again with one difference. Tap it. Changes go from loud recolours to near-identical hue shifts.</p>

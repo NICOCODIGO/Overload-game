@@ -6,6 +6,7 @@ import { ResultScreen } from "@/components/ResultScreen";
 import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
+import { SHAPES, ShapeGlyph, isShape } from "@/components/ShapeGlyph";
 import { sfx } from "@/lib/audio";
 import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -73,7 +74,52 @@ const EMOJI_PAIRS: [string, string][] = [
   ["🦊", "🐺"],
   ["🍒", "🍓"],
   ["🌙", "🌛"],
+  ["🐮", "🐷"],
+  ["🦁", "🐯"],
+  ["🐔", "🐣"],
+  ["🐧", "🐦"],
+  ["🦉", "🦅"],
+  ["🐴", "🦓"],
+  ["🐘", "🦏"],
+  ["🐙", "🦑"],
+  ["🦋", "🐛"],
+  ["🍇", "🫐"],
+  ["🍐", "🍏"],
+  ["🥕", "🌶"],
+  ["🥦", "🥬"],
+  ["🍞", "🥐"],
+  ["🍩", "🍪"],
+  ["🎂", "🧁"],
+  ["☕", "🍵"],
+  ["🚌", "🚐"],
+  ["🚲", "🛵"],
+  ["✈", "🚀"],
+  ["⛵", "🚤"],
+  ["🏠", "🏡"],
+  ["🌲", "🌳"],
+  ["🌻", "🌼"],
+  ["🍁", "🍂"],
+  ["❄", "💧"],
+  ["🔥", "💥"],
+  ["⚽", "🏀"],
+  ["🎸", "🎻"],
+  ["🔔", "🔕"],
+  ["🔑", "🔒"],
 ];
+
+/**
+ * Shape crowds for the colour and conjunction stages. These used to be a
+ * hardcoded ● and ■, so every conjunction sector anyone ever played was the
+ * same circle-and-square field with only the colours moving — which is exactly
+ * what makes the game feel like it has less content than it does.
+ *
+ * Drawn from ShapeGlyph rather than typed, for the reason that file documents:
+ * Bungee has none of these characters, so as text they fall through to whatever
+ * symbol font the OS supplies and change size per platform.
+ */
+const SHAPE_PAIRS: [string, string][] = SHAPES.flatMap((a) =>
+  SHAPES.filter((b) => b !== a).map((b) => [a, b] as [string, string])
+);
 
 // Character crowds: [crowd, target] — the near-identical twins. Every pair has
 // to stay two *distinct* glyphs in a mono font; 0/O and 1/l are excluded
@@ -100,6 +146,26 @@ const CHAR_PAIRS: [string, string][] = [
   ["V", "Y"],
   ["3", "8"],
   ["u", "v"],
+  ["m", "n"],
+  ["r", "n"],
+  ["g", "q"],
+  ["y", "v"],
+  ["J", "j"],
+  ["D", "O"],
+  ["Q", "G"],
+  ["N", "M"],
+  ["T", "Y"],
+  ["A", "R"],
+  ["H", "N"],
+  ["6", "9"],
+  ["9", "g"],
+  ["4", "A"],
+  ["7", "T"],
+  ["2", "7"],
+  ["5", "6"],
+  ["k", "x"],
+  ["w", "v"],
+  ["z", "s"],
 ];
 
 /** Ordered crowd/target color pairs — 12 of them, so a 3-round color stage
@@ -136,6 +202,7 @@ function roundPlan(i: number): {
 interface LookBags {
   color: () => [string, string];
   conjunction: () => [string, string];
+  shape: () => [string, string];
   emoji: () => [string, string];
   chars: () => [string, string];
 }
@@ -151,8 +218,12 @@ function generateRound(rng: Rng, i: number, bags: LookBags): SearchRound {
 
   if (kind === "color") {
     const [colorA, colorB] = bags.color();
-    crowd = [{ glyph: "●", color: colorA }];
-    target = { glyph: "●", color: colorB };
+    // The shape is irrelevant to the question — it only has to be the SAME
+    // for crowd and target, so colour is the only difference. Drawing it
+    // anyway means three colour sectors don't all look like the same field.
+    const shape = bags.shape()[0];
+    crowd = [{ glyph: shape, color: colorA }];
+    target = { glyph: shape, color: colorB };
     rotate = false;
   } else if (kind === "shape") {
     const [c, t] = bags.emoji();
@@ -161,11 +232,12 @@ function generateRound(rng: Rng, i: number, bags: LookBags): SearchRound {
   } else if (kind === "conjunction") {
     // Crowd shares the target's color OR its shape — never both.
     const [colorA, colorB] = bags.conjunction();
+    const [shapeA, shapeB] = bags.shape();
     crowd = [
-      { glyph: "●", color: colorA },
-      { glyph: "■", color: colorB },
+      { glyph: shapeA, color: colorA },
+      { glyph: shapeB, color: colorB },
     ];
-    target = { glyph: "■", color: colorA };
+    target = { glyph: shapeB, color: colorA };
     rotate = false;
   } else {
     const [c, t] = bags.chars();
@@ -202,6 +274,7 @@ function generateRounds(rng: Rng, total: number): SearchRound[] {
   const bags: LookBags = {
     color: makeBag(rng, COLOR_PAIRS),
     conjunction: makeBag(rng, COLOR_PAIRS),
+    shape: makeBag(rng, SHAPE_PAIRS),
     emoji: makeBag(rng, EMOJI_PAIRS),
     chars: makeBag(rng, CHAR_PAIRS),
   };
@@ -451,7 +524,11 @@ export function AnomalyGame() {
               zIndex: cell.isTarget ? 1 : 0,
             }}
           >
-            {cell.glyph}
+            {isShape(cell.glyph) ? (
+              <ShapeGlyph shape={cell.glyph} />
+            ) : (
+              cell.glyph
+            )}
           </button>
         ))}
 
