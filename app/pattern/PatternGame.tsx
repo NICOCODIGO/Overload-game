@@ -12,6 +12,7 @@ import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { distinctRounds, pick, randInt, shuffle, type Rng } from "@/lib/rng";
 import { useT, type RuleSpec } from "@/lib/i18n";
+import { SHAPES, ShapeGlyph, isShape } from "@/components/ShapeGlyph";
 import {
   bumpStreak,
   getBest,
@@ -37,7 +38,6 @@ function termKey(t: Term): string {
   return "text" in t ? t.text : `${t.glyph}@${((t.deg % 360) + 360) % 360}`;
 }
 
-const SHAPES = ["●", "■", "▲", "★", "◆"] as const;
 const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 interface Generated {
@@ -264,6 +264,17 @@ function generateRounds(rng: Rng, total: number): PatternRound[] {
 function TermView({ term, large }: { term: Term; large?: boolean }) {
   const t = useT();
   if ("text" in term) {
+    // Shapes are drawn, not typed. Bungee has none of these characters, so as
+    // text they fell through to whatever symbol font the OS handed back — and
+    // those disagree enormously on how big each one should be (see
+    // ShapeGlyph.tsx). Drawing them keeps every shape one identical em box.
+    if (isShape(term.text)) {
+      return (
+        <span className={`inline-block ${large ? "text-2xl" : ""}`}>
+          <ShapeGlyph shape={term.text} />
+        </span>
+      );
+    }
     return <span className={large ? "text-2xl" : ""}>{term.text}</span>;
   }
   return (

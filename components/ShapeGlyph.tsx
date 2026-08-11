@@ -1,5 +1,5 @@
 /**
- * The five shapes, drawn instead of typed.
+ * The shapes, drawn instead of typed.
  *
  * They used to be the Unicode characters ● ■ ▲ ★ ◆ set in `font-display`.
  * Two problems with that, and Headcount's "COUNT THE TINY ONES" round tripped
@@ -29,8 +29,10 @@
  */
 
 /** The shape keys. Still the characters themselves: they're the id everywhere
-    else — i18n's shape names, round de-duplication keys, the games' pools. */
-export const SHAPES = ["●", "■", "▲", "★", "◆"] as const;
+    else — i18n's shape names, round de-duplication keys, the games' pools.
+    Since nothing renders these as text any more, a key only has to be unique;
+    whether the running device owns a font for it stopped mattering. */
+export const SHAPES = ["●", "■", "▲", "★", "◆", "⬢", "✚"] as const;
 
 export type ShapeKey = (typeof SHAPES)[number];
 
@@ -50,6 +52,8 @@ export const SHAPE_HALF: Record<ShapeKey, { w: number; h: number }> = {
   "▲": { w: 0.415, h: 0.37 },
   "★": { w: 0.415, h: 0.395 },
   "◆": { w: 0.415, h: 0.415 },
+  "⬢": { w: 0.36, h: 0.41 },
+  "✚": { w: 0.41, h: 0.41 },
 };
 
 /** Star: outer radius 41.5, inner 20.75, point up, box-centered (which is why
@@ -71,6 +75,17 @@ const PATHS: Record<ShapeKey, React.ReactNode> = {
   "★": <polygon points={STAR_POINTS} />,
   // diagonals 79 × 79 → area 3120
   "◆": <polygon points="50,10.5 89.5,50 50,89.5 10.5,50" />,
+  // Pointy-top regular hexagon, circumradius 39 → 67.5 wide × 78 tall,
+  // area 3951. Reads clearly apart from ● at a glance because the flats catch
+  // the eye where a circle has none.
+  "⬢": (
+    <polygon points="50,11 16.23,30.5 16.23,69.5 50,89 83.77,69.5 83.77,30.5" />
+  ),
+  // 78 × 78 with 28-wide arms → area 3584. The only shape here with a concave
+  // outline, which is what keeps it unmistakable at the tiny size class.
+  "✚": (
+    <polygon points="36,11 64,11 64,36 89,36 89,64 64,64 64,89 36,89 36,64 11,64 11,36 36,36" />
+  ),
 };
 
 /**
