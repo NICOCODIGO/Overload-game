@@ -11,4 +11,4 @@
  * game is unloseable. This is the shipping value; flip it on locally, flip it
  * back before you commit.
  */
-export const UNLIMITED_LIVES = false;
+export const UNLIMITED_LIVES = true;

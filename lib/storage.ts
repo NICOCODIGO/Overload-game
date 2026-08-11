@@ -82,14 +82,25 @@ export function submitBest(
 export interface DailyResult {
   display: string;
   emojis: string;
+  /** How many times this daily has been finished. Owned by `setDailyResult` —
+      callers pass the run, not the count. Absent on records written before the
+      field existed; those are read as one prior attempt, never as a first try,
+      so a stale record can't hand out an unearned celebration. */
+  attempts?: number;
 }
 
 export function getDailyResult(game: GameId, day: number): DailyResult | null {
   return get<DailyResult | null>(`daily:${game}:${day}`, null);
 }
 
-export function setDailyResult(game: GameId, day: number, result: DailyResult) {
-  set(`daily:${game}:${day}`, result);
+export function setDailyResult(
+  game: GameId,
+  day: number,
+  result: Omit<DailyResult, "attempts">
+) {
+  const prev = getDailyResult(game, day);
+  const before = prev ? (prev.attempts ?? 1) : 0;
+  set(`daily:${game}:${day}`, { ...result, attempts: before + 1 });
 }
 
 // -------------------------------------------------------------------- streaks

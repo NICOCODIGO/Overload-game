@@ -12,6 +12,7 @@ import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { distinctRounds, pick, randInt, shuffle, type Rng } from "@/lib/rng";
 import { useT, type CountKind, type CountQuery } from "@/lib/i18n";
+import { SHAPES, SHAPE_HALF, ShapeGlyph, isShape } from "@/components/ShapeGlyph";
 import {
   bumpStreak,
   getBest,
@@ -46,13 +47,17 @@ const NUMBER_POOL = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 // that turns with them. Whichever end the bar is on is the bottom.
 const BARRED_DIGITS = new Set(["6", "9"]);
 
-const SHAPE_POOL = ["●", "■", "▲", "★", "◆"] as const;
+// Drawn, not typed — see components/ShapeGlyph. The characters are still the
+// ids (i18n names them, rounds key off them); only the rendering is ours.
+const SHAPE_POOL = SHAPES;
 
 type Size = "huge" | "normal" | "tiny";
 
 // Wide gap on purpose: this has to read as "obviously bigger/smaller" at a
-// glance, not require a side-by-side comparison.
-const SIZE_SCALE: Record<Size, number> = { huge: 2.1, normal: 1.0, tiny: 0.5 };
+// glance, not require a side-by-side comparison. Tiny sits at 0.45 rather than
+// a half so the gap survives `wobble` and the eye's own slop — the smallest
+// normal shape still ends up comfortably bigger than the largest tiny one.
+const SIZE_SCALE: Record<Size, number> = { huge: 2.1, normal: 1.0, tiny: 0.45 };
 
 // Small glyphs stack above big ones so a huge one can never bury a tiny one
 // completely — every item stays countable.
@@ -275,9 +280,14 @@ function generateRound(rng: Rng, i: number): CountRound {
     const fontCqw = Math.min(66 / cols, 11) * SIZE_SCALE[look.size];
     // Spinners turn a full 360°, so they sweep their own diagonal; a still
     // glyph only needs its half-width and half-height. Both carry a little
-    // slack for `wobble`.
-    const halfW = fontCqw * (look.spin ? 0.5 : 0.32);
-    const halfH = fontCqw * (look.spin ? 0.5 : 0.4);
+    // slack for `wobble`. Shapes know their own drawn extent — the old flat
+    // 0.32/0.4 was a digit's shape, and a triangle inked wider than that, so
+    // triangles could sit half-through the wall of the field.
+    const half = isShape(look.glyph)
+      ? SHAPE_HALF[look.glyph]
+      : { w: look.spin ? 0.5 : 0.32, h: look.spin ? 0.5 : 0.4 };
+    const halfW = fontCqw * half.w;
+    const halfH = fontCqw * half.h;
     // Never let the safe area collapse to nothing on a very large glyph.
     const inset = (m: number) => Math.min(m, 45);
     const place = (v: number, m: number) =>
@@ -617,7 +627,11 @@ export function CountGame() {
                 item.spin ? "animate-count-spin" : ""
               } ${BARRED_DIGITS.has(item.glyph) ? "digit-bar" : ""}`}
             >
-              {item.glyph}
+              {isShape(item.glyph) ? (
+                <ShapeGlyph shape={item.glyph} />
+              ) : (
+                item.glyph
+              )}
             </span>
           </span>
         ))}
