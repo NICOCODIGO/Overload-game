@@ -4,7 +4,7 @@
 
 
 <p align="center">Nine quick stressful mini-games that test reflexes, focus, and patience.
-Every game has a daily challenge everyday so that every player gets to try something new, plus an endless **unlimited mode**. Both are scored by rounds survived.</p>
+Every game has a daily challenge everyday so that every player gets to try something new, plus an endless unlimited mode. Both are scored by rounds survived with 3 lives.</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 <p align="center">
@@ -14,7 +14,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 
 
 
-<p align="center">30 commands, 3 lives. Only obey when the card is stamped SIMON SAYS. From round 5 the button labels lie (Stroop trap), and feint rounds open on GET READY TO TAP — move during the hold, and you're out; wait it through and the real command lands.</p>
+<p align="center">30 commands, only obey when the card is stamped SIMON SAYS</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
@@ -24,7 +24,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 </p>
 
 
-<p align="center">Intercept an arrow code and re-key it before the channel closes. Deep transmissions flash once, then go dark — input from memory. A wrong key resets the code and burns time</p>
+<p align="center">In this mini game about interception, an arrow code must be typed correctly before the timer runs out. For the feep transmissions, the arrow code will flash and then go dark, must be input from memory. A wrong code resets the code and burns time</p>
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
 <p align="center">
@@ -33,7 +33,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 </p>
 
 
-<p align="center">20 prompts, short words escalating into punctuated phrases. Type them exactly. Typos flash red; the clock has no mercy. Score is prompts survived plus accuracy.</p>
+<p align="center">20 rounds, short words escalating into punctuated phrases, <ins>it must be typed exactly as it is written.</ins> Typos flash red</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
@@ -42,7 +42,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
   <img src=".github/demos/OVERCLOCKED2.gif" alt="Overclocked gameplay" width="880">
 </p>
 
-<p align="center">Read the analog clock, tap the matching time — flip rounds reverse it, matching a digital time to a face. Numbers vanish, distractors become hand-swap traps, and the finale clocks spin, freeze, and disappear.</p>
+<p align="center">Read the analog clock, tap the matching time, there is a flip round that reverses it, matching a digital time to a face. Harder rounds includes numbers vanish, distractors become hand-swap traps, and the finale clocks spin, freeze, and disappear requiring the player to memorize</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
@@ -51,7 +51,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
   <img src=".github/demos/ANOMALY2.gif" alt="Anomaly gameplay" width="880">
 </p>
 
-<p align="center">One glyph in a seeded crowd doesn't belong. Colour pops give way to odd-one-out emoji, then conjunction search, then near-identical character twins. Wrong taps burn time.</p>
+<p align="center">One glyph in a seeded crowd doesn't belong. Colour pops give way to odd-one-out, wrong taps burn time.</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
@@ -60,7 +60,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
   <img src=".github/demos/HEADCOUNT2.gif" alt="Headcount gameplay" width="880">
 </p>
 
-<p align="center">A mob of numbers and shapes in mixed colours, sizes, and spins — count only what the question asks for ("how many are mint?", "how many triangles?", "how many huge 7s?"). One keypad tap to answer.</p>
+<p align="center">A mob of numbers and shapes in mixed colours, sizes, and spins, <ins>count only what the question asks for</ins> ("how many are mint?", "how many triangles?", "how many huge 7s?"). One keypad tap to answer</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
@@ -70,7 +70,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
   <img src=".github/demos/NEXT2.gif" alt="Next! gameplay" width="880">
 </p>
 
-<p align="center">Sequence completion: number runs, letter ladders, growing gaps, spinning arrows. The wrong options are the mistakes you were about to make — miss one and the rule is drawn onto the pattern itself.</p>
+<p align="center">Sequence completion: number run, letter ladders, growing gaps, spinning arrows</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
@@ -80,7 +80,7 @@ Every game has a daily challenge everyday so that every player gets to try somet
 </p>
 
 
-<p align="center">Unscramble the hidden word from a pile of letter tiles — but decoys are mixed in. The hint disappears as you climb; one correct letter is locked in green to start you off.</p>
+<p align="center">Unscramble the hidden word from a pile of letter tiles BUT decoys are mixed in. The hint disappears as you climb, one correct letter is locked in green to start you off</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 
@@ -89,10 +89,10 @@ Every game has a daily challenge everyday so that every player gets to try somet
   <img src=".github/demos/BLINK2.gif" alt="Blink gameplay" width="880">
 </p>
 
-<p align="center">Change blindness: the scene flashes, blinks, and flashes again with one difference. Tap it. Changes go from loud recolours to near-identical hue shifts.</p>
+<p align="center">Change blindness: the scene flashes, blinks, and flashes again with one difference. Changes go from loud recolours to near-identical hue shifts.</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
-Personal bests, daily results, and the daily streak live in `localStorage`.
+Personal bests, daily results, and the daily streak live in the user browser.
 Results copy to the clipboard as share text, Wordle-style:
 
 
@@ -102,7 +102,7 @@ Overload: Signal Rush #12 — Level 9 ⚡ — ✅✅✅✅✅✅✅✅❌ — be
 
 ## About
 
-- **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
+- **Next.js 16** + **TypeScript** + **Tailwind CSS** 
 - Fully static, no backend as of now, for now this is meant to be played in browser
 - Support For Mobile: touch/swipe/d-pad + on-screen keyboard everywhere; arrow keys,
   WASD, and number keys on desktop.
