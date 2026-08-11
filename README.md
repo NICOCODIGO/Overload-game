@@ -2,9 +2,12 @@
   <img src=".github/overload.svg" alt="OVERLOAD — the brain arcade" width="880">
 </p>
 
+<center><h2>No downloads, no ads, no sign-ups. Just fast, fun web games ready in one click</h2></center>
+
+
 
 <p align="center">Nine quick stressful mini-games that test reflexes, focus, and patience.
-Every game has a daily challenge everyday so that every player gets to try something new, plus an endless unlimited mode. Both are scored by rounds survived with 3 lives.</p>
+Every game has a daily challenge everyday so that every player gets to try something new, plus an endless unlimited mode, scored by rounds survived with 3 lives.</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 <p align="center">
