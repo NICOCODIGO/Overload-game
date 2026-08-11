@@ -7,7 +7,7 @@
 
 
 <p align="center">Nine quick stressful mini-games that test reflexes, focus, and patience.
-Every game has a daily challenge everyday so that every player gets to try something new, plus an endless unlimited mode, scored by rounds survived with 3 lives.</p>
+Every game has a daily challenge that resets everyday plus with an endless unlimited mode</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 <p align="center">
