@@ -5,8 +5,9 @@ import { useRef, useState } from "react";
 import type { GameId, Mode } from "@/lib/daily";
 import { GAMES } from "@/lib/games";
 import { buildShareText, copyToClipboard } from "@/lib/share";
+import { getDailyResult } from "@/lib/storage";
 import { useT } from "@/lib/i18n";
-import { useLiveBackdrop } from "@/lib/hooks";
+import { useClientValue, useLiveBackdrop } from "@/lib/hooks";
 import { PixelIcon, type UiIcon } from "./PixelIcon";
 import { GameTitle } from "./GameTitle";
 import { Confetti } from "./Confetti";
@@ -49,6 +50,7 @@ export function ResultScreen(props: ResultScreenProps) {
   const meta = GAMES[props.game];
   const [copied, setCopied] = useState(false);
   const bestBadgeRef = useRef<HTMLDivElement>(null);
+  const scoreRef = useRef<HTMLDivElement>(null);
 
   // Survival runs can be 100+ rounds — far too many sprites to render or to
   // paste into a chat. Show only the tail (where the run got hard and ended)
@@ -83,6 +85,25 @@ export function ResultScreen(props: ResultScreenProps) {
 
   // Same stat tiles as the intro screen — best for this mode, plus streak.
   const isDaily = props.mode === "daily";
+
+  // The daily's record is written before this screen mounts, so `attempts`
+  // already counts the run being shown: 1 means it was nailed first go.
+  const daily = useClientValue(
+    () => (isDaily ? getDailyResult(props.game, props.dailyNum) : null),
+    null
+  );
+  // Same definition the menu card uses for its PERFECT badge: not one ❌.
+  const flawless =
+    props.survived &&
+    props.emojis.length > 0 &&
+    !props.emojis.includes("❌");
+  // Deliberately reads `attempts === 1` rather than defaulting a missing count
+  // to 1: before the client read lands `daily` is null, and treating that as a
+  // first try would flash confetti on mount and then yank it away.
+  const perfectFirstTry = isDaily && flawless && daily?.attempts === 1;
+  // A clean first run can never be a `newBest` — there's no previous score to
+  // beat — so without this the best possible result gets the quietest screen.
+  const celebrate = props.newBest || perfectFirstTry;
   const stats: { icon: UiIcon; value: string; label: string; color: string }[] =
     [
       ...(props.bestDisplay
@@ -109,7 +130,11 @@ export function ResultScreen(props: ResultScreenProps) {
 
   return (
     <div className="animate-rise flex flex-1 flex-col items-center justify-center gap-4 py-4 text-center sm:gap-6 sm:py-10">
-      {props.newBest && <Confetti originRef={bestBadgeRef} />}
+      {/* Bursts from the NEW BEST badge when there is one; a perfect run has
+          no badge, so it launches from the score instead. */}
+      {celebrate && (
+        <Confetti originRef={props.newBest ? bestBadgeRef : scoreRef} />
+      )}
       <GameTitle game={props.game} />
 
       <h2
@@ -131,7 +156,7 @@ export function ResultScreen(props: ResultScreenProps) {
 
       {/* One results card: score, run strip, stats */}
       <div className="w-full max-w-sm space-y-2.5 rounded-2xl border-2 border-line bg-panel px-6 py-4 shadow-chunk sm:space-y-3 sm:py-5">
-        <div className="font-display text-3xl text-lemon sm:text-4xl">
+        <div ref={scoreRef} className="font-display text-3xl text-lemon sm:text-4xl">
           {props.scoreLine}
         </div>
         <div>

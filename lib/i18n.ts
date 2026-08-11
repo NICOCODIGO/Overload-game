@@ -56,9 +56,7 @@ export type RuleSpec =
   | { k: "step"; token: string }
   /** 0 = the very next letter. */
   | { k: "letterSkip"; skip: number }
-  | { k: "rotation"; deg: number; clockwise: boolean }
-  | { k: "secondDiff"; growth: number }
-  | { k: "letterGrow" };
+  | { k: "rotation"; deg: number; clockwise: boolean };
 
 /** Intro-screen and in-play copy for one game. */
 interface GameCopy {
@@ -270,10 +268,6 @@ function enRule(spec: RuleSpec): string {
       return `rotates ${spec.deg}° ${
         spec.clockwise ? "clockwise" : "anticlockwise"
       } each step`;
-    case "secondDiff":
-      return `the step grows by ${spec.growth} every time`;
-    case "letterGrow":
-      return "the gap grows by one letter each step";
   }
 }
 

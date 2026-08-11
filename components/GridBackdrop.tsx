@@ -4,7 +4,13 @@ import { useEffect, useRef } from "react";
 
 /**
  * The synthwave grid behind everything — a corridor of two perspective planes
- * running toward the viewer, capped by a lit horizon.
+ * running toward the viewer, out of a void that swallows them at the middle.
+ *
+ * There is no horizon line. The corridor doesn't end at a lit seam; it fades
+ * to nothing and is then painted over by a band of darkness, so the lines read
+ * as travelling out of somewhere unlit rather than as stopping at a wall.
+ * Order matters — the void goes down *after* the grid. Fading alone reads as
+ * lines running out of ink; darkness on top reads as depth in front of them.
  *
  * Drawn on a canvas rather than with CSS 3D transforms, and that is the whole
  * point. The CSS version was a pair of elements 200% of the viewport wide with
@@ -26,10 +32,19 @@ const RGB = "255,93,115";
 /** Line opacity at the near edge. Low enough that paper-on-ink text keeps its
     contrast — this sits behind real content. */
 const GRID_ALPHA = 0.2;
-const HORIZON_ALPHA = 0.42;
-/** Distance from the viewport middle out to each horizon bar, as a fraction of
-    viewport height. The grid stops here and the bar is drawn on the seam. */
-const GAP = 0.065;
+/** Distance from the viewport middle out to where each half's grid stops, as a
+    fraction of viewport height. Lines reach zero alpha here, so the clip edge
+    itself is never visible — this is the mouth of the void, not a seam. */
+const GAP = 0.075;
+/** The abyss, darker than --color-ink so it reads as a hole in the page rather
+    than as more page. Near-black rather than pure black: pure #000 against the
+    indigo ground looks like a rendering fault on OLED. */
+const VOID_RGB = "6,3,18";
+const VOID_ALPHA = 0.92;
+/** How far the darkness bleeds past the void mouth, as a fraction of viewport
+    height. Generous, because a short falloff draws a visible band edge — the
+    one hard line this whole effect exists to get rid of. */
+const VOID_REACH = 0.3;
 /** Seconds for the grid to advance one row. Lower is faster. */
 const SPEED = 6;
 /** Rows drawn per half. Past ~30 they land inside the horizon bar anyway. */
@@ -75,7 +90,7 @@ export function GridBackdrop() {
       const mid = H / 2;
       const near = H / 2;
       const gap = H * GAP;
-      const edge = mid + dir * gap; // horizon bar / where the grid stops
+      const edge = mid + dir * gap; // the void's mouth — where the grid stops
       const far = mid + dir * near; // the screen edge
 
       ctx.save();
@@ -106,27 +121,30 @@ export function GridBackdrop() {
         if (d <= 0.02) continue; // behind the camera
         const y = mid + dir * (near / d);
         if (Math.abs(y - mid) > near + 4) continue; // past the screen edge
-        // Fade with depth, matching the verticals' gradient.
+        // Fade with depth, matching the verticals' gradient. Reaches a true 0
+        // at the void mouth — the old floor of 0.2 left a rung of lines
+        // stacked on the seam, which is what made it read as a horizon.
         const t = Math.min(1, Math.max(0, (Math.abs(y - mid) - gap) / (near - gap)));
-        ctx.strokeStyle = `rgba(${RGB},${GRID_ALPHA * (0.2 + 0.8 * t)})`;
+        ctx.strokeStyle = `rgba(${RGB},${GRID_ALPHA * t})`;
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(W, y);
         ctx.stroke();
       }
       ctx.restore();
+    };
 
-      // The horizon itself: a tight core plus a wide bloom. Two passes rather
-      // than one, because a single shadow reads as a drawn rule, not a light.
-      ctx.save();
-      ctx.shadowColor = `rgba(${RGB},0.85)`;
-      ctx.shadowBlur = 16;
-      ctx.fillStyle = `rgba(${RGB},${HORIZON_ALPHA})`;
-      ctx.fillRect(0, edge - 1.5, W, 3);
-      ctx.shadowBlur = 44;
-      ctx.fillStyle = `rgba(${RGB},${HORIZON_ALPHA * 0.45})`;
-      ctx.fillRect(0, edge - 1.5, W, 3);
-      ctx.restore();
+    /** The abyss the corridor runs out of. Drawn over both halves, so the last
+        of the grid is consumed by it rather than merely thinning out. */
+    const drawVoid = () => {
+      const mid = H / 2;
+      const reach = H * VOID_REACH;
+      const grad = ctx.createLinearGradient(0, mid - reach, 0, mid + reach);
+      grad.addColorStop(0, `rgba(${VOID_RGB},0)`);
+      grad.addColorStop(0.5, `rgba(${VOID_RGB},${VOID_ALPHA})`);
+      grad.addColorStop(1, `rgba(${VOID_RGB},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, mid - reach, W, reach * 2);
     };
 
     let phase = 0;
@@ -137,6 +155,7 @@ export function GridBackdrop() {
       ctx.clearRect(0, 0, W, H);
       drawHalf(phase, 1);
       drawHalf(phase, -1);
+      drawVoid();
     };
 
     const frame = (now: number) => {

@@ -54,14 +54,20 @@ interface Generated {
   steps?: string[];
 }
 
+/**
+ * Every rule here moves by a CONSTANT step — +3 each time, ×2 each time, 45°
+ * each time. Rules whose step itself accelerated (+2, +4, +6…) used to live
+ * here too and were cut: reading a sequence and reading the *rate of change* of
+ * a sequence are different puzzles, and the second one plays as a gotcha rather
+ * than as something you can spot. If a growing-step rule ever comes back, it
+ * belongs in its own game, not mixed into this one.
+ */
 type PatternKind =
   | "shapeCycle"
   | "arithmetic"
   | "letterSkip"
   | "geometric"
-  | "rotation"
-  | "secondDiff"
-  | "letterGrow";
+  | "rotation";
 
 const num = (n: number): Term => ({ text: String(n) });
 const letter = (i: number): Term => ({ text: ALPHA[i] });
@@ -159,42 +165,6 @@ const GENERATORS: Record<PatternKind, (rng: Rng) => Generated> = {
     };
   },
 
-  /** Steps that grow: +2, +4, +6 → the classic "it was accelerating" trap. */
-  secondDiff(rng) {
-    const a = randInt(rng, 1, 10);
-    const d = randInt(rng, 1, 4);
-    const k = randInt(rng, 1, 3);
-    const t1 = a + d;
-    const t2 = t1 + d + k;
-    const t3 = t2 + d + 2 * k;
-    const ans = t3 + d + 3 * k;
-    return {
-      terms: [num(a), num(t1), num(t2), num(t3)],
-      answer: num(ans),
-      wrongs: [num(t3 + d + 2 * k), num(ans + 1), num(ans - 1), num(ans + k)],
-      rule: { k: "secondDiff", growth: k },
-      steps: [0, 1, 2, 3].map((n) => `+${d + n * k}`),
-    };
-  },
-
-  /** Gaps that grow by one letter each time: A, B, D, G, K → P. */
-  letterGrow(rng) {
-    const start = randInt(rng, 0, 10);
-    const idxs = [start];
-    for (let gap = 1; gap <= 4; gap++) idxs.push(idxs[idxs.length - 1] + gap);
-    const ansIdx = idxs[4] + 5;
-    const lastGapRepeat = idxs[4] + 4; // the "constant gap" trap
-    const wrongIdxs = [lastGapRepeat, ansIdx - 1, ansIdx + 1].filter(
-      (i) => i < 26 && i !== ansIdx
-    );
-    return {
-      terms: idxs.map(letter),
-      answer: letter(ansIdx),
-      wrongs: wrongIdxs.map(letter),
-      rule: { k: "letterGrow" },
-      steps: [1, 2, 3, 4, 5].map((n) => `+${n}`),
-    };
-  },
 };
 
 /** Warm-up cycles and simple runs → letters and spins → layered rules. */
@@ -206,17 +176,27 @@ function roundPlan(i: number): { kind: PatternKind; duration: number } {
     { kind: "letterSkip", duration: 9 },
     { kind: "geometric", duration: 8 },
     { kind: "rotation", duration: 8 },
-    { kind: "secondDiff", duration: 10 },
-    { kind: "letterGrow", duration: 10 },
+    { kind: "letterSkip", duration: 8 },
+    { kind: "arithmetic", duration: 7 },
     { kind: "geometric", duration: 7 },
     { kind: "rotation", duration: 7.5 },
-    { kind: "secondDiff", duration: 9 },
+    { kind: "geometric", duration: 6.5 },
   ];
   if (i < plans.length) return plans[i];
-  // Survival past the daily's 14: cycle the four hardest rule types forever,
-  // solve time grinding down to a floor.
+  // Survival past the daily's 11: cycle the rule types forever, solve time
+  // grinding down to a floor. Weighted toward arithmetic and letterSkip —
+  // those two have far the deepest pool of distinct sequences (hundreds,
+  // against geometric's handful), so a long run repeats itself much less than
+  // a flat rotation would.
   const laps = i - plans.length;
-  const hard: PatternKind[] = ["secondDiff", "letterGrow", "geometric"];
+  const hard: PatternKind[] = [
+    "arithmetic",
+    "letterSkip",
+    "rotation",
+    "arithmetic",
+    "letterSkip",
+    "geometric",
+  ];
   return {
     kind: hard[laps % hard.length],
     duration: Math.max(5.5, 10 - laps * 0.3),
