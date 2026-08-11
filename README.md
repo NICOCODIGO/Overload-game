@@ -3,10 +3,8 @@
 </p>
 
 
-<p align="center">Nine fast, stressful mini-games that test reflexes, focus, and patience.
-Every game has a **daily challenge** — seeded from the UTC date, so every
-player worldwide gets the identical run — plus an endless **unlimited mode**
-(how long can you last?), scored by rounds survived.</p>
+<p align="center">Nine quick stressful mini-games that test reflexes, focus, and patience.
+Every game has a daily challenge everyday so that every player gets to try something new, plus an endless **unlimited mode**. Both are scored by rounds survived.</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 <p align="center">
