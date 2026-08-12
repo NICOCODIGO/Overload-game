@@ -95,8 +95,6 @@ interface Dict {
   playAgain: string;
   backToArcade: string;
   lastShown: (n: number) => string;
-  mute: string;
-  unmute: string;
   hooks: Record<GameId, string>;
   games: Record<GameId, GameCopy>;
 
@@ -121,8 +119,6 @@ interface Dict {
     // Headcount
     itWas: (n: number) => string;
     timesUpItWas: (n: number) => string;
-    // Next!
-    itsRinged: string;
     // Scramble
     solved: string;
     // Blink
@@ -181,7 +177,6 @@ interface Dict {
     spinNote: string;
     anyColorAnySize: string;
     anyColor: string;
-    barNote: string;
   };
 
   /** Next!'s rule sentences. */
@@ -278,7 +273,7 @@ const EN: Dict = {
   feedback: "SEND FEEDBACK",
   daily: "CHALLENGE",
   perfect: "PERFECT",
-  doneLabel: "DONE",
+  doneLabel: "COMPLETED",
   playToday: "Not Yet Played Today",
   survival: "UNLIMITED",
   survivalSub: "endless challenges",
@@ -296,13 +291,11 @@ const EN: Dict = {
   playAgain: "PLAY AGAIN",
   backToArcade: "← BACK TO ARCADE",
   lastShown: (n) => `last ${n} shown`,
-  mute: "Mute sounds",
-  unmute: "Unmute sounds",
   hooks: {
     simon: "Only obey when Simon says. The buttons will lie to you",
     sequence: "Intercept the code. Re-key it before the channel closes",
     typing: "Type it exactly how it is written. The clock has no mercy",
-    clock: "Quick! What time is it? The hands won't wait, and neither will the clock",
+    clock: "Quick! What time is it? Hopefully you can read and tell the time",
     anomaly: "One of them doesn't belong. Find it before the feed cuts",
     count: "Count the chaos, but only the ones we ask for. Requires focus",
     pattern: "2, 4, 8, 16… the pattern knows what comes next. Do you?",
@@ -417,7 +410,6 @@ const EN: Dict = {
     anomalyFound: "ANOMALY CONFIRMED ✓",
     itWas: (n) => `IT WAS ${n}`,
     timesUpItWas: (n) => `TIME'S UP — IT WAS ${n}`,
-    itsRinged: "NOPE — IT'S RINGED",
     solved: "SOLVED ✓",
     gotIt: "GOT IT ✓",
     missedIt: "MISSED IT — RINGED",
@@ -464,7 +456,6 @@ const EN: Dict = {
     spinNote: "(spinning = the tilted ones)",
     anyColorAnySize: "(any color · any size",
     anyColor: "(any color",
-    barNote: " · the bar marks the bottom",
   },
   rule: enRule,
 };

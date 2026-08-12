@@ -421,11 +421,16 @@ export function CountGame() {
     if (correct) sfx.success();
     else sfx.error();
 
-    // A miss lingers: the non-matches fade and the ones you had to count are
-    // left standing, so give real time to see what the answer was — plus half a
-    // second per item beyond six, since a big count takes longer to recount.
+    // Both outcomes now fade the non-matches out and leave the counted items
+    // standing, but they're held for different reasons and so for different
+    // lengths. A miss has to be studied — you're finding out what you should
+    // have tallied — plus half a second per item beyond six, since a big count
+    // takes longer to recount. A hit only needs confirming, so it holds just
+    // past the 500ms fade: long enough to watch the answer separate itself out,
+    // short enough that nine correct rounds don't add a minute to the run.
     const answer = roundsRef.current[roundRef.current].answer;
     const missLinger = 2600 + Math.max(0, answer - 6) * 500;
+    const hitLinger = 1300;
 
     gapTimeoutRef.current = window.setTimeout(
       () => {
@@ -441,7 +446,7 @@ export function CountGame() {
           beginRound();
         }
       },
-      correct ? 700 : missLinger
+      correct ? hitLinger : missLinger
     );
   }
 
@@ -530,15 +535,9 @@ export function CountGame() {
           : part
       )
     : [];
-  // Only spell the bar out on the rounds where mistaking a 6 for a 9 would
-  // actually cost you the answer.
-  const barHint = parts.some((p) => p.chip && BARRED_DIGITS.has(p.text))
-    ? t.count.barNote
-    : "";
-
   // On a miss, fade out everything that didn't need counting so the items that
   // did are laid bare — the player sees exactly what they were meant to tally.
-  const revealing = phase === "gap" && gap !== null && !gap.ok;
+  const revealing = phase === "gap" && gap !== null;
 
   return (
     <div className="flex flex-1 flex-col gap-2 py-2 sm:gap-3 sm:py-4">
@@ -586,14 +585,12 @@ export function CountGame() {
         )}
         {r?.kind === "glyph" && (
           <p className="text-xs text-fog">
-            {t.count.anyColorAnySize}
-            {barHint})
+            {t.count.anyColorAnySize})
           </p>
         )}
         {r?.kind === "hugeGlyph" && (
           <p className="text-xs text-fog">
-            {t.count.anyColor}
-            {barHint})
+            {t.count.anyColor})
           </p>
         )}
       </div>

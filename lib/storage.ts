@@ -131,12 +131,3 @@ export function bumpStreak(): number {
   return count;
 }
 
-// ----------------------------------------------------------------------- mute
-
-export function getMuted(): boolean {
-  return get("muted", false);
-}
-
-export function setMuted(muted: boolean): void {
-  set("muted", muted);
-}
