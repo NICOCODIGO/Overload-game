@@ -274,14 +274,14 @@ function enRule(spec: RuleSpec): string {
 }
 
 const EN: Dict = {
-  tagline: "Nine ways to test your brain. New challenges everyday",
+  tagline: "Series of Game to test your reflexes, memory, and focus. No hassle, just play",
   feedback: "SEND FEEDBACK",
   daily: "CHALLENGE",
   perfect: "PERFECT",
   doneLabel: "DONE",
   playToday: "Not Yet Played Today",
   survival: "UNLIMITED",
-  survivalSub: "endless — how long can you last?",
+  survivalSub: "endless challenges",
   streak: (n) => `${n} day streak`,
   streakHint: "Play every day to grow your streak",
   statDaily: "TODAY'S BEST",
@@ -343,8 +343,8 @@ const EN: Dict = {
     clock: {
       tagline: "What time is it? It's OVERLOAD time!",
       howTo: [
-        "Tap the time that matches the clock — some rounds flip it and you pick the face that matches the time",
-        "Later faces lose their numbers — and the final clocks spin, freeze, and vanish. Answer from memory",
+        "Tap the time that matches the clock.",
+        "Later faces lose their numbers and then the final face clock will spin, freeze, and vanish, answer from memory",
       ],
       controls: "Tap an answer OR use keys 1–4 on desktop",
       counter: "CLOCK",
