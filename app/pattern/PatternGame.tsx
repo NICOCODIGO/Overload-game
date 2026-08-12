@@ -408,7 +408,7 @@ export function PatternGame() {
     if (optionIdx === r.answerIdx) {
       endRound(true, t.fb.nice);
     } else {
-      endRound(false, t.fb.itsRinged);
+      endRound(false, t.fb.wrong);
     }
   }
 
