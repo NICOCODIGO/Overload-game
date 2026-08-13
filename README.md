@@ -1,4 +1,5 @@
 <p align="center">
+  <a href="https://overloadarcade.com/">
   <img src=".github/overload.svg" alt="OVERLOAD — the brain arcade" width="880">
 </p>
 
@@ -7,7 +8,7 @@
 
 
 <p align="center">Nine quick stressful mini-games that test reflexes, focus, and patience.
-Every game has a daily challenge that resets everyday plus with an endless unlimited mode</p>
+Every game has a daily challenge that resets every day, plus an endless unlimited mode</p>
 
 <p align="center"><img src=".github/divider.svg" alt="" width="880"></p>
 <p align="center">
