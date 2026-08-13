@@ -1,6 +1,11 @@
 /**
  * Share-text builder + clipboard helper.
- * Format: "Overload: Signal Rush #12 — Level 9 ⚡ — ✅✅✅❌ — beat me: <url>"
+ * Format: "Overload: Signal Rush #12 — Level 9 ⚡ — beat me: <url>"
+ *
+ * One line, and the score carries the whole result. The per-round ✅/❌ strip
+ * that used to sit here was a wall of glyphs that wrapped differently in every
+ * chat app and said nothing the score doesn't; it still renders on the result
+ * screen, where it's pixel sprites laid out in rows rather than pasted text.
  */
 
 export function siteUrl(): string {
@@ -13,12 +18,11 @@ export function buildShareText(opts: {
   gameName: string;
   dailyNum: number | null; // null = unlimited run
   scoreLine: string;
-  emojis: string;
   path: string;
 }): string {
   const tag = opts.dailyNum ? ` #${opts.dailyNum}` : " (unlimited)";
   const url = `${siteUrl()}${opts.path}`;
-  return `Overload: ${opts.gameName}${tag} — ${opts.scoreLine} — ${opts.emojis} — beat me: ${url}`;
+  return `Overload: ${opts.gameName}${tag} — ${opts.scoreLine} — beat me: ${url}`;
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {
