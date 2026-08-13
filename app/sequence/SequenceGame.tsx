@@ -7,7 +7,6 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
-import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, type Rng } from "@/lib/rng";
@@ -170,7 +169,7 @@ export function SequenceGame() {
       // Channel closed before the code was keyed in.
       elapsedRef.current += (performance.now() - attemptStartRef.current) / 1000;
       attemptsRef.current.push(false);
-      if (!UNLIMITED_LIVES) livesRef.current -= 1;
+      livesRef.current -= 1;
       setLives(livesRef.current);
       sfx.error();
       if (livesRef.current <= 0) {

@@ -7,7 +7,6 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
-import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { distinctRounds, pick, randInt, shuffle, type Rng } from "@/lib/rng";
@@ -260,7 +259,7 @@ export function ClockGame() {
     lockedRef.current = true;
     timer.stop();
     resultsRef.current.push(passed);
-    if (!passed && !UNLIMITED_LIVES) livesRef.current -= 1;
+    if (!passed) livesRef.current -= 1;
     setLives(livesRef.current);
     setFeedback({ ok: passed, msg });
     setPhase("feedback");

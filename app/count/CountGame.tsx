@@ -7,7 +7,6 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
-import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { distinctRounds, pick, randInt, shuffle, type Rng } from "@/lib/rng";
@@ -414,7 +413,7 @@ export function CountGame() {
     elapsedRef.current += Math.max(0, budget - timer.remaining());
     timer.stop();
     resultsRef.current.push(correct);
-    if (!correct && !UNLIMITED_LIVES) livesRef.current -= 1;
+    if (!correct) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: correct, msg });
     setPhaseSafe("gap");
