@@ -469,15 +469,42 @@ const ICONS: Record<IconName, IconDef> = {
   },
 };
 
-/** Cells grouped by character so each part can animate as one unit. */
-function cellsByChar(rows: string[]): Record<string, { x: number; y: number }[]> {
-  const cells: Record<string, { x: number; y: number }[]> = {};
-  rows.forEach((row, y) =>
-    [...row].forEach((ch, x) => {
-      if (ch !== ".") (cells[ch] ??= []).push({ x, y });
-    })
-  );
-  return cells;
+/**
+ * One path per character — every cell of that char merged into a single shape,
+ * with horizontal runs collapsed into one rectangle each.
+ *
+ * Drawing the cells as separate <rect>s looks identical at rest but falls
+ * apart under the hover rotations: `crispEdges` snaps each shape to the device
+ * pixel grid on its own with antialiasing off, so once the sprite is off-axis
+ * two neighbouring cells can each decide a boundary pixel isn't theirs and the
+ * card shows through as a speckle (visible in Firefox, not in Chromium, which
+ * rasterizes once and rotates the layer). Inside one path there are no such
+ * boundaries: coincident interior edges cancel under the fill rule, so the
+ * whole glyph rasterizes as one region at any angle.
+ *
+ * Grouping by char — not by color — is what keeps `parts` animatable, since
+ * each part is exactly the cells sharing a character.
+ */
+function pathsByChar(rows: string[]): Record<string, string> {
+  const paths: Record<string, string> = {};
+  rows.forEach((row, y) => {
+    let x = 0;
+    while (x < row.length) {
+      const ch = row[x];
+      if (ch === ".") {
+        x += 1;
+        continue;
+      }
+      let w = 1;
+      while (row[x + w] === ch) w += 1;
+      // Every run wound the same way (right, down, left, close) so the fill
+      // rule reads the union rather than punching holes.
+      paths[ch] = `${paths[ch] ?? ""}M${x} ${y}h${w}v1h-${w}z`;
+      x += w;
+    }
+  });
+  return paths;
+}
 }
 
 export function PixelIcon({
@@ -507,17 +534,24 @@ export function PixelIcon({
       aria-hidden
       className={className}
     >
-      {Object.entries(cellsByChar(def.rows)).map(([ch, pts]) => (
-        <g key={ch} className={animated ? def.parts?.[ch] : undefined}>
-          {pts.map((p) => (
-            <rect
-              key={`${p.x}-${p.y}`}
-              x={p.x}
-              y={p.y}
-              width="1"
-              height="1"
-              fill={def.colors[ch]}
-            />
+      {Object.entries(pathsByChar(def.rows)).map(([ch, d]) => (
+        <path
+          key={ch}
+          d={d}
+          fill={def.colors[ch]}
+          className={animated ? def.parts?.[ch] : undefined}
+        />
+      ))}
+      {layers.map((layer) => (
+        <g
+          key={layer.className}
+          className={animated ? layer.className : undefined}
+        >
+          {Object.entries(pathsByChar(layer.rows)).map(([ch, d]) => (
+            <path key={ch} d={d} fill={def.colors[ch]} />
+          ))}
+        </g>
+      ))}
           ))}
         </g>
       ))}

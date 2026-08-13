@@ -39,6 +39,17 @@ const SURVIVAL_CAP = 150;
     never reads as dead air. The countdown is only armed once the hold ends,
     so this costs the player no answer time. */
 const FEINT_MS = 700;
+/** Longest streak of consecutive rounds allowed to share a verdict.
+ *
+ * A non-says round is won by sitting still until the clock expires, so a run
+ * of them is pure dead air — worst at the start, where the ramp's timers are
+ * longest and feints haven't armed yet. Left to an unbiased coin, ~1 daily in
+ * 10 opened with four or more of them: about 13 seconds of doing nothing
+ * before the game got going. Says streaks are cheaper, but a long one lets the
+ * "don't tap" trap go dormant until it reads as a gotcha rather than a test of
+ * attention, so it gets a looser cap of its own. */
+const MAX_QUIET_RUN = 2;
+const MAX_SAYS_RUN = 4;
 
 interface Command {
   simonSays: boolean;
@@ -59,6 +70,9 @@ interface Command {
 function generateCommands(rng: Rng, total: number, survival: boolean): Command[] {
   const commands: Command[] = [];
   let stroopFlip = 0;
+  // The verdict the run is currently on, and how long it has held it.
+  let runVerdict = false;
+  let runLength = 0;
   for (let r = 0; r < total; r++) {
     // Survival squeezes past the daily's 1.25s floor — but stops at 1.15s.
     // A scrambled Stroop card costs ~400ms to read, ~250ms of interference,
@@ -71,18 +85,33 @@ function generateCommands(rng: Rng, total: number, survival: boolean): Command[]
     const labels = scrambled ? derange(rng, COLORS) : [...COLORS];
 
     // Feint: opens on "GET READY TO TAP…" before the command shows.
-    const feint = r >= 7 && rng() < 0.12;
+    let feint = r >= 7 && rng() < 0.12;
+    // Drawn every round even when the streak cap overrides it below, so a cap
+    // never shifts the RNG stream and the seed still fixes the whole daily.
     const says = rng() < 0.62;
+    // A feint always follows through. The hold is the trap, so what lands
+    // after it has to be a command the player is required to answer —
+    // otherwise the round has two "do nothing" answers and no tension.
+    let simonSays = feint || says;
+    // Break a streak that has run its length, whichever verdict it's on.
+    const cap = runVerdict ? MAX_SAYS_RUN : MAX_QUIET_RUN;
+    if (runLength >= cap && simonSays === runVerdict) simonSays = !runVerdict;
+    // Being capped into a non-say costs the round its feint, since a hold that
+    // resolves to "do nothing" is the follow-through the rule above forbids.
+    if (!simonSays) feint = false;
+    if (simonSays === runVerdict) {
+      runLength += 1;
+    } else {
+      runVerdict = simonSays;
+      runLength = 1;
+    }
     const kind: "color" | "label" = scrambled
       ? stroopFlip++ % 2 === 0
         ? "color"
         : "label"
       : "color";
     commands.push({
-      // A feint always follows through. The hold is the trap, so what lands
-      // after it has to be a command the player is required to answer —
-      // otherwise the round has two "do nothing" answers and no tension.
-      simonSays: feint || says,
+      simonSays,
       kind,
       target: pick(rng, COLORS),
       labels,

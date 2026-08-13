@@ -314,7 +314,7 @@ const EN: Dict = {
       unit: (n) => `${n} rounds`,
     },
     sequence: {
-      tagline: "Calling in Hell- Wait wrong game!",
+      tagline: "Calling in Helldivers starategic code. Can you intercept it?",
       howTo: [
         "Key in the arrow code, in order, before the channel closes",
         "Deep transmissions flash once then go dark — re-key them from memory. A wrong key resets the code",

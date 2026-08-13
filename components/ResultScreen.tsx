@@ -52,17 +52,14 @@ export function ResultScreen(props: ResultScreenProps) {
   const bestBadgeRef = useRef<HTMLDivElement>(null);
   const scoreRef = useRef<HTMLDivElement>(null);
 
-  // Survival runs can be 100+ rounds — far too many sprites to render or to
-  // paste into a chat. Show only the tail (where the run got hard and ended)
-  // and prefix a "…" marker so it reads as a clipped strip.
+  // Survival runs can be 100+ rounds — far too many sprites to render. Show
+  // only the tail (where the run got hard and ended), with a label above it
+  // saying how much is on screen.
   const MAX_STRIP = 40;
   const clipped = props.emojis.length > MAX_STRIP;
   const shown = clipped ? props.emojis.slice(-MAX_STRIP) : props.emojis;
 
   const share = async () => {
-    const shareEmojis = clipped
-      ? "…" + props.emojis.slice(-30).join("")
-      : props.emojis.join("");
     const ok = await copyToClipboard(
       buildShareText({
         gameName: meta.name,
@@ -76,8 +73,9 @@ export function ResultScreen(props: ResultScreenProps) {
     if (ok) setTimeout(() => setCopied(false), 1800);
   };
 
-  // Wrap the strip every 10 for readability; share text stays one line.
-  // On screen the ✅/❌ render as pixel sprites; the clipboard keeps emoji.
+  // Wrap the strip every 10 for readability. The ✅/❌ are render instructions
+  // here rather than text — each becomes a pixel sprite — and the strip is now
+  // screen-only; the share text carries the score alone.
   const rows: string[][] = [];
   for (let i = 0; i < shown.length; i += 10) {
     rows.push(shown.slice(i, i + 10));

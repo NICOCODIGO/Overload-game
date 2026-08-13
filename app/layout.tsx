@@ -24,8 +24,12 @@ const grotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  // Baked at build time — this is a static export, so there is no runtime to
+  // fall back on the way share.ts can. The real domain is the default rather
+  // than a placeholder: an unset env var used to ship og:url pointing at a
+  // domain that doesn't exist.
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://overload-arcade.example.com"
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://overloadarcade.com"
   ),
   title: {
     default: "Overload — the brain arcade",
@@ -36,6 +40,11 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: "Overload",
     type: "website",
+  },
+  // Wide banner rather than the small square card. Without this the image below
+  // renders as a thumbnail — or, on X, as no card at all.
+  twitter: {
+    card: "summary_large_image",
   },
 };
 
@@ -63,7 +72,7 @@ export default function RootLayout({
       className={`${bungee.variable} ${grotesk.variable} ${vt323.variable} antialiased`}
     >
       {/* min-h-screen (absolute 100vh) so the flex column always fills the
-          viewport — the footer's mt-auto needs real free space to push into.
+          viewport — the footer's mt-auto needs real free space to push into; the game screens size their panels against it.
           min-h-full depended on an html height chain that wasn't resolving. */}
       {/* dvh (not vh) so mobile browser chrome is accounted for — the games
           are meant to fit the phone screen without scrolling. */}

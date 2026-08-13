@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   description:
     "A mob of numbers and shapes floods the screen — count only what the question asks for. Colors, sizes, spinners, and cruel combos. One tap to answer.",
   openGraph: {
+    // Repeated per page because Next merges metadata shallowly — a page
+    // openGraph object replaces the root layout's rather than extending it,
+    // so without these two the built pages ship no og:site_name or og:type.
+    siteName: "Overload",
+    type: "website",
     title: "Headcount — Overload",
     description:
       "Count the chaos — but only the ones we ask for. 12 questions a day, and the mob keeps growing.",
