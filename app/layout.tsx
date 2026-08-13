@@ -63,7 +63,7 @@ export default function RootLayout({
       className={`${bungee.variable} ${grotesk.variable} ${vt323.variable} antialiased`}
     >
       {/* min-h-screen (absolute 100vh) so the flex column always fills the
-          viewport — the footer's mt-auto needs real free space to push into.
+          viewport — the game screens size their panels against it.
           min-h-full depended on an html height chain that wasn't resolving. */}
       {/* dvh (not vh) so mobile browser chrome is accounted for — the games
           are meant to fit the phone screen without scrolling. */}

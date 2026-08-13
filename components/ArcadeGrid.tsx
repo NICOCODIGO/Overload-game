@@ -11,9 +11,9 @@ export function ArcadeGrid() {
   useLiveBackdrop(); // attract mode — the grid runs on the arcade floor
 
   return (
-    // Content flows from the top; the footer is pushed to the bottom with
-    // mt-auto. On short viewports the page just scrolls — nothing centers
-    // into dead space or clips.
+    // Content flows from the top and the footer trails the cards directly.
+    // It used to hug the viewport bottom via mt-auto, which opened a band of
+    // dead space under the grid on short, wide windows.
     <div className="animate-rise flex flex-1 flex-col gap-8 py-10">
       <div className="text-center">
         <h1 className="title-glitch relative inline-block font-display text-5xl leading-tight text-lemon drop-shadow-[4px_4px_0_var(--color-coral)] sm:text-6xl">
