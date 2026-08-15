@@ -106,6 +106,10 @@ interface Dict {
     close: string;
     howHeading: string;
     how: string[];
+    streakHeading: string;
+    streakIntro: string;
+    streakGrows: string;
+    streakResets: string;
     faqHeading: string;
     faq: { q: string; a: string }[];
     feedbackHeading: string;
@@ -320,21 +324,19 @@ const EN: Dict = {
       "Nine games. Each one has a daily challenge, plus an unlimited mode that keeps going until your lives run out.",
       "The daily is the same for every player in the world.",
       "Three lives a run. Lose all three and the run is over.",
-      "Finish all nine dailies in the same day to grow your streak.",
     ],
+    streakHeading: "STREAKS",
+    streakIntro:
+      "Once you've cleared a day, this sits up in the header, counting how many days you've kept it alive.",
+    streakGrows:
+      "Finish all nine dailies in a day — win or lose, any score at all — and it climbs by one.",
+    streakResets:
+      "Let a whole day go by with even one of the nine unfinished, and it drops back to zero.",
     faqHeading: "FAQ",
     faq: [
       {
         q: "Do I need an account?",
         a: "No. Nothing to sign up for and nothing to install — open the page and play.",
-      },
-      {
-        q: "Why did my streak reset?",
-        a: "A streak needs all nine daily challenges finished in the same day. Leave one unplayed when the clock hits midnight UTC and the streak starts over.",
-      },
-      {
-        q: "Do I have to win to keep my streak?",
-        a: "No. A daily counts the moment you've played it to the end — win or lose, good score or terrible one. Only playing all nine matters.",
       },
       {
         q: "Where is my progress saved?",

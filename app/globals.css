@@ -161,6 +161,30 @@ body.kb-fit {
   animation: rise 0.3s ease-out both;
 }
 
+/* The info panel arrives on the same rise as the arcade grid and the intro
+   screens, so opening it reads as another screen of the site rather than a
+   browser dialog appearing over it.
+
+   Keyed off [open] rather than a plain class: the dialog sits in the DOM from
+   mount, and a display:none element never runs its animation — it would have
+   been over before the player ever pressed the button. */
+dialog.panel-rise[open] {
+  animation: rise 0.3s ease-out both;
+}
+
+/* The dim behind it comes up over the same beat, so the backdrop doesn't snap
+   to full black while the panel is still on its way in. Pure opacity with no
+   movement — nothing vestibular — so it's left alone under reduced motion for
+   the same reason the d-pad echo is. (::backdrop isn't matched by the `*`
+   rule below regardless.) */
+@keyframes backdrop-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+dialog.panel-rise[open]::backdrop {
+  animation: backdrop-in 0.3s ease-out both;
+}
+
 /* Headcount "spinning" numbers. Starts and ends at a 12° tilt so that when
    prefers-reduced-motion collapses the animation, spinners freeze visibly
    TILTED — the question stays answerable without motion. */

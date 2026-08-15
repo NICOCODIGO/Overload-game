@@ -6,6 +6,7 @@ import { getStreak } from "@/lib/storage";
 import { useClientValue, useMuted } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 import { PixelIcon } from "./PixelIcon";
+import { StreakBadge } from "./StreakBadge";
 
 /**
  * Slim full-width status bar: logo hard left (and the way home), streak +
@@ -29,11 +30,10 @@ export function Header() {
         <div className="flex items-center gap-3">
           {streak > 0 && (
             <span
-              className="group relative flex h-11 cursor-default items-center gap-1.5 font-display text-sm text-coral"
+              className="group relative flex h-11 cursor-default items-center"
               aria-label={`${t.streak(streak)} — ${t.streakHint}`}
             >
-              <PixelIcon name="flame" size={20} className="flame-flicker" />
-              {streak}
+              <StreakBadge count={streak} />
               {/* Hover tooltip: right-aligned so it never runs off the edge. */}
               <span
                 role="tooltip"

@@ -4,6 +4,10 @@ import { useRef } from "react";
 import { FEEDBACK_URL, REPO_LABEL, SOCIALS } from "@/lib/links";
 import { useT } from "@/lib/i18n";
 import { PixelIcon } from "./PixelIcon";
+import { StreakBadge } from "./StreakBadge";
+
+/** Stand-in count for the example badge. The live one is in the header. */
+const STREAK_EXAMPLE = 5;
 
 /**
  * The ⓘ button and the panel behind it.
@@ -43,7 +47,7 @@ export function InfoPanel() {
         onClick={(e) => {
           if (e.target === ref.current) ref.current.close();
         }}
-        className="m-auto max-h-[85svh] w-[92vw] max-w-lg overflow-y-auto rounded-2xl border-2 border-line bg-panel p-0 text-paper shadow-chunk backdrop:bg-ink/80"
+        className="panel-rise m-auto max-h-[85svh] w-[92vw] max-w-lg overflow-y-auto rounded-2xl border-2 border-line bg-panel p-0 text-paper shadow-chunk backdrop:bg-ink/80"
       >
         <div className="sticky top-0 flex items-center justify-between gap-4 border-b-2 border-line bg-panel px-5 py-4">
           <h2 id="info-title" className="font-display text-base text-lemon">
@@ -73,6 +77,35 @@ export function InfoPanel() {
                   <span>{line}</span>
                 </li>
               ))}
+            </ul>
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h3 className="font-display text-xs tracking-[0.16em] text-mint">
+              {t.info.streakHeading}
+            </h3>
+            <div className="flex items-center gap-3 rounded-lg border-2 border-line bg-panel2 p-3">
+              {/* The header's own badge, so it's recognised on sight. Hidden
+                  from screen readers: the count is a stand-in, and the line
+                  beside it already says what the thing is. */}
+              <span aria-hidden className="shrink-0">
+                <StreakBadge count={STREAK_EXAMPLE} />
+              </span>
+              <p className="text-sm text-fog">{t.info.streakIntro}</p>
+            </div>
+            <ul className="flex flex-col gap-2">
+              <li className="flex gap-2 text-sm text-fog">
+                <span aria-hidden className="text-mint">
+                  ▲
+                </span>
+                <span>{t.info.streakGrows}</span>
+              </li>
+              <li className="flex gap-2 text-sm text-fog">
+                <span aria-hidden className="text-coral">
+                  ▼
+                </span>
+                <span>{t.info.streakResets}</span>
+              </li>
             </ul>
           </section>
 
