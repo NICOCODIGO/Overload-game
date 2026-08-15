@@ -270,7 +270,7 @@ function enRule(spec: RuleSpec): string {
 }
 
 const EN: Dict = {
-  tagline: "Series of Game to test your reflexes, memory, and focus. New challenges every day",
+  tagline: "A series of game to test your reflexes, memory, and focus. New challenges every day",
   daily: "CHALLENGE",
   perfect: "PERFECT",
   doneLabel: "COMPLETED",
