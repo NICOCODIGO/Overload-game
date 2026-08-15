@@ -17,8 +17,7 @@ export type UiIcon =
   | "github"
   | "instagram"
   | "xsocial"
-  | "youtube"
-  | "mail";
+  | "youtube";
 
 export type IconName = GameId | UiIcon;
 
@@ -449,24 +448,6 @@ const ICONS: Record<IconName, IconDef> = {
     ],
     colors: { "#": CORAL, o: PAPER },
   },
-  // Envelope with a lemon fold — the feedback button's sprite.
-  mail: {
-    rows: [
-      "............",
-      "............",
-      "############",
-      "#oo......oo#",
-      "#.oo....oo.#",
-      "#..oo..oo..#",
-      "#...oooo...#",
-      "#..........#",
-      "#..........#",
-      "############",
-      "............",
-      "............",
-    ],
-    colors: { "#": PAPER, o: LEMON },
-  },
 };
 
 /**
@@ -504,7 +485,6 @@ function pathsByChar(rows: string[]): Record<string, string> {
     }
   });
   return paths;
-}
 }
 
 export function PixelIcon({
@@ -550,28 +530,6 @@ export function PixelIcon({
           {Object.entries(pathsByChar(layer.rows)).map(([ch, d]) => (
             <path key={ch} d={d} fill={def.colors[ch]} />
           ))}
-        </g>
-      ))}
-          ))}
-        </g>
-      ))}
-      {layers.map((layer) => (
-        <g
-          key={layer.className}
-          className={animated ? layer.className : undefined}
-        >
-          {Object.entries(cellsByChar(layer.rows)).flatMap(([ch, pts]) =>
-            pts.map((p) => (
-              <rect
-                key={`${ch}-${p.x}-${p.y}`}
-                x={p.x}
-                y={p.y}
-                width="1"
-                height="1"
-                fill={def.colors[ch]}
-              />
-            ))
-          )}
         </g>
       ))}
     </svg>

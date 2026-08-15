@@ -65,7 +65,6 @@ export function ResultScreen(props: ResultScreenProps) {
         gameName: meta.name,
         dailyNum: props.mode === "daily" ? props.dailyNum : null,
         scoreLine: `${props.scoreLine} ${SHARE_EMOJI[props.game]}`,
-        emojis: shareEmojis,
         path: meta.path,
       })
     );

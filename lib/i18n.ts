@@ -72,7 +72,6 @@ interface GameCopy {
 
 interface Dict {
   tagline: string;
-  feedback: string;
   daily: string;
   /** Menu-card daily status. */
   perfect: string;
@@ -269,8 +268,7 @@ function enRule(spec: RuleSpec): string {
 }
 
 const EN: Dict = {
-  tagline: "Series of Game to test your reflexes, memory, and focus. No hassle, just play",
-  feedback: "SEND FEEDBACK",
+  tagline: "Series of Game to test your reflexes, memory, and focus. New challenges every day",
   daily: "CHALLENGE",
   perfect: "PERFECT",
   doneLabel: "COMPLETED",
