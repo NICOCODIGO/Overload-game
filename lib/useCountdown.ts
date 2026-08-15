@@ -13,7 +13,14 @@ import { sfx } from "./audio";
 export interface Countdown {
   /** 1 at start, 0 when expired. */
   progress: number;
-  start: (durationSeconds: number, onExpire: () => void) => void;
+  start: (
+    durationSeconds: number,
+    onExpire: () => void,
+    /** `silentExpiry` withholds the timeout sting for rounds where running the
+        clock out is the *right* answer — Simon's "didn't say" cards. Expiring
+        is a win there, and the alarm would be calling it a loss. */
+    opts?: { silentExpiry?: boolean }
+  ) => void;
   stop: () => void;
   /** Deduct seconds from the live deadline (error penalties). */
   shave: (seconds: number) => void;
@@ -29,9 +36,15 @@ export function useCountdown(): Countdown {
   const rafRef = useRef(0);
   const onExpireRef = useRef<(() => void) | null>(null);
   const lastProgressRef = useRef(1);
+  const silentExpiryRef = useRef(false);
 
   const start = useCallback(
-    (durationSeconds: number, onExpire: () => void) => {
+    (
+      durationSeconds: number,
+      onExpire: () => void,
+      opts?: { silentExpiry?: boolean }
+    ) => {
+      silentExpiryRef.current = opts?.silentExpiry ?? false;
       durationRef.current = durationSeconds;
       endAtRef.current = performance.now() + durationSeconds * 1000;
       onExpireRef.current = onExpire;
@@ -54,6 +67,9 @@ export function useCountdown(): Countdown {
           runningRef.current = false;
           const cb = onExpireRef.current;
           onExpireRef.current = null;
+          // Every game's clock runs out through here, so the timeout sting
+          // lives here rather than in nine separate miss handlers.
+          if (cb && !silentExpiryRef.current) sfx.timesUp();
           cb?.();
           return;
         }

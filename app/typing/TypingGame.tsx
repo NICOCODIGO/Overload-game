@@ -171,7 +171,7 @@ export function TypingGame() {
       resultsRef.current.push(false);
       livesRef.current -= 1;
       setLives(livesRef.current);
-      sfx.error();
+      sfx.error("typing");
       haptics.fail();
       // A short beat on the miss: the next prompt doesn't snap in under your
       // fingers, so keystrokes still finishing the old word don't corrupt it.
@@ -205,11 +205,13 @@ export function TypingGame() {
       }
       if (sawError) {
         setErrKey((k) => k + 1);
-        sfx.error();
+        sfx.error("typing");
         // The one cue that reaches a player watching their own thumbs.
         haptics.error();
-      } else {
-        sfx.tap();
+      } else if (next !== target) {
+        // The letter that completes the prompt doesn't click — the solved
+        // chime below covers that beat.
+        sfx.tap("typing");
       }
     }
     setValue(next);
@@ -218,8 +220,12 @@ export function TypingGame() {
       // Exact match — prompt survived.
       timer.stop();
       resultsRef.current.push(true);
-      sfx.success();
-      if (indexRef.current + 1 >= totalRef.current) {
+      const done = indexRef.current + 1 >= totalRef.current;
+      // The prompt that ends the run hands its chime to the run-complete
+      // tune. Both fire on this same frame otherwise, and the short one
+      // just smears the front of the long one.
+      if (!done) sfx.success();
+      if (done) {
         finish(true);
       } else {
         nextPrompt(indexRef.current + 1);

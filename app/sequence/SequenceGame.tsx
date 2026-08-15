@@ -165,24 +165,34 @@ export function SequenceGame() {
     setPos(0);
     attemptStartRef.current = performance.now();
     setPhaseSafe("input");
-    timer.start(levelDuration(lvl), () => {
-      // Channel closed before the code was keyed in.
-      elapsedRef.current += (performance.now() - attemptStartRef.current) / 1000;
-      attemptsRef.current.push(false);
-      livesRef.current -= 1;
-      setLives(livesRef.current);
-      sfx.error();
-      if (livesRef.current <= 0) {
-        finish(false);
-        return;
-      }
-      setGap({ ok: false, msg: t.fb.channelClosed });
-      setPhaseSafe("gap");
-      timeoutRef.current = window.setTimeout(
-        () => startLevel(levelRef.current),
-        900
-      );
-    });
+    timer.start(
+      levelDuration(lvl),
+      () => {
+        // Channel closed before the code was keyed in.
+        elapsedRef.current +=
+          (performance.now() - attemptStartRef.current) / 1000;
+        attemptsRef.current.push(false);
+        livesRef.current -= 1;
+        setLives(livesRef.current);
+        const over = livesRef.current <= 0;
+        // The miss that ends the run hands its buzz to the game-over tune —
+        // unlike the other games, nothing delays finish() here, so the two
+        // would land on the same frame.
+        if (!over) sfx.error("sequence");
+        if (over) {
+          finish(false);
+          return;
+        }
+        setGap({ ok: false, msg: t.fb.channelClosed });
+        setPhaseSafe("gap");
+        timeoutRef.current = window.setTimeout(
+          () => startLevel(levelRef.current),
+          900
+        );
+      },
+      // The expiry that ends the run stays quiet; game over covers that beat.
+      { silentExpiry: livesRef.current <= 1 }
+    );
   }
 
   function startLevel(lvl: number) {
@@ -197,11 +207,11 @@ export function SequenceGame() {
       setPhaseSafe("preview");
       posRef.current = 0;
       setPos(0);
-      sfx.reveal();
+      sfx.reveal("sequence");
       const previewMs = (0.8 + code.length * 0.45) * 1000;
       timeoutRef.current = window.setTimeout(() => beginInput(lvl), previewMs);
     } else {
-      sfx.reveal();
+      sfx.reveal("sequence");
       beginInput(lvl);
     }
   }
@@ -214,17 +224,24 @@ export function SequenceGame() {
     if (ok) {
       posRef.current += 1;
       setPos(posRef.current);
-      sfx.good();
-      if (posRef.current >= code.length) {
+      const complete = posRef.current >= code.length;
+      // The key that finishes the code doesn't click — the cleared chime
+      // below covers that beat, and both at once is a smear.
+      if (!complete) sfx.good("sequence");
+      if (complete) {
         // Code re-transmitted in time.
         timer.stop();
         elapsedRef.current +=
           (performance.now() - attemptStartRef.current) / 1000;
         clearedRef.current = levelRef.current;
         attemptsRef.current.push(true);
-        sfx.success();
+        const done =
+          modeRef.current === "daily" && levelRef.current >= DAILY_LEVELS;
+        // The level that ends the run hands its chime to the run-complete
+        // tune, for the same reason the last key doesn't click.
+        if (!done) sfx.success("sequence");
         setFlashKey((k) => k + 1);
-        if (modeRef.current === "daily" && levelRef.current >= DAILY_LEVELS) {
+        if (done) {
           finish(true);
           return;
         }
@@ -240,7 +257,7 @@ export function SequenceGame() {
       posRef.current = 0;
       setPos(0);
       setShakeKey((k) => k + 1);
-      sfx.error();
+      sfx.error("sequence");
       timer.shave(WRONG_PENALTY);
     }
   }

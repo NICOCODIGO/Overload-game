@@ -277,14 +277,20 @@ export function SimonGame() {
     if (phase !== "show") return;
     const cmd = commandsRef.current[roundRef.current];
     sfx.reveal();
-    timer.start(cmd.duration, () => {
-      // Letting the clock run out is only correct when Simon didn't say.
-      if (!cmd.simonSays) {
-        advance(true, t.fb.didntSayOk);
-      } else {
-        advance(false, t.fb.tooSlow);
-      }
-    });
+    timer.start(
+      cmd.duration,
+      () => {
+        // Letting the clock run out is only correct when Simon didn't say.
+        if (!cmd.simonSays) {
+          advance(true, t.fb.didntSayOk);
+        } else {
+          advance(false, t.fb.tooSlow);
+        }
+      },
+      // …so on those rounds the clock running out is the win, and the round
+      // ends on the success chime rather than a timeout alarm.
+      { silentExpiry: !cmd.simonSays }
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, round]);
 

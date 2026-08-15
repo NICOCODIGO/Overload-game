@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import type { GameId, Mode } from "@/lib/daily";
 import { GAMES } from "@/lib/games";
 import { getBest } from "@/lib/storage";
 import { useClientValue, useLiveBackdrop } from "@/lib/hooks";
-import { unlockAudio } from "@/lib/audio";
+import { preloadSounds, unlockAudio } from "@/lib/audio";
 import { useT } from "@/lib/i18n";
 import { PixelIcon, type UiIcon } from "./PixelIcon";
 
@@ -26,6 +27,9 @@ interface IntroScreenProps {
 export function IntroScreen(props: IntroScreenProps) {
   const t = useT();
   useLiveBackdrop(); // grid runs until the round starts and this unmounts
+  // Fetch and decode custom sounds while the how-to is being read, so the
+  // first one of the run isn't still downloading when the round starts.
+  useEffect(preloadSounds, []);
   const g = t.games[props.game];
   const bestDaily = useClientValue(() => getBest(props.game, "daily"), null);
   const bestSurvival = useClientValue(

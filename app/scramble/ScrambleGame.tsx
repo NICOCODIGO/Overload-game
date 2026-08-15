@@ -232,7 +232,7 @@ export function ScrambleGame() {
     setGap({ ok: solved, msg });
     setPhaseSafe("gap");
     if (solved) sfx.success();
-    else sfx.error();
+    else sfx.error("scramble");
 
     gapTimeoutRef.current = window.setTimeout(
       () => {
@@ -272,7 +272,7 @@ export function ScrambleGame() {
     } else {
       // Wrong word: shake, shave time, clear the row — but keep the life (and
       // the locked anchor).
-      sfx.error();
+      sfx.error("scramble");
       setShakeKey((k) => k + 1);
       timer.shave(WRONG_PENALTY);
       setSlotsSafe(initSlots(r));
