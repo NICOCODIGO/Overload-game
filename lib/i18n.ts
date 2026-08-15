@@ -96,6 +96,24 @@ interface Dict {
   lastShown: (n: number) => string;
   mute: string;
   unmute: string;
+
+  /** The information panel behind the footer's ⓘ button — the one place the
+      rules that aren't visible on screen actually get stated. */
+  info: {
+    /** Button label, also its tooltip. */
+    label: string;
+    title: string;
+    close: string;
+    howHeading: string;
+    how: string[];
+    faqHeading: string;
+    faq: { q: string; a: string }[];
+    feedbackHeading: string;
+    feedbackLine: string;
+    feedbackCta: string;
+    sourceCta: string;
+  };
+
   hooks: Record<GameId, string>;
   games: Record<GameId, GameCopy>;
 
@@ -293,6 +311,50 @@ const EN: Dict = {
   lastShown: (n) => `last ${n} shown`,
   mute: "Mute sounds",
   unmute: "Unmute sounds",
+  info: {
+    label: "How this works",
+    title: "HOW OVERLOAD WORKS",
+    close: "Close",
+    howHeading: "THE BASICS",
+    how: [
+      "Nine games. Each one has a daily challenge, plus an unlimited mode that keeps going until your lives run out.",
+      "The daily is the same for every player in the world.",
+      "Three lives a run. Lose all three and the run is over.",
+      "Finish all nine dailies in the same day to grow your streak.",
+    ],
+    faqHeading: "FAQ",
+    faq: [
+      {
+        q: "Do I need an account?",
+        a: "No. Nothing to sign up for and nothing to install — open the page and play.",
+      },
+      {
+        q: "Why did my streak reset?",
+        a: "A streak needs all nine daily challenges finished in the same day. Leave one unplayed when the clock hits midnight UTC and the streak starts over.",
+      },
+      {
+        q: "Do I have to win to keep my streak?",
+        a: "No. A daily counts the moment you've played it to the end — win or lose, good score or terrible one. Only playing all nine matters.",
+      },
+      {
+        q: "Where is my progress saved?",
+        a: "In this browser. Another device, another browser, or clearing your site data all start you over from nothing.",
+      },
+      {
+        q: "Can I replay a daily?",
+        a: "As many times as you like. The best score you set that day is the one that's kept.",
+      },
+      {
+        q: "Does it work on a phone?",
+        a: "Yes. Every game takes touch as well as keyboard.",
+      },
+    ],
+    feedbackHeading: "FOUND A BUG? GOT AN IDEA?",
+    feedbackLine:
+      "Suggestions, problems, a game that feels unfair or a word that shouldn't be in there — all of it helps, and it comes straight to me.",
+    feedbackCta: "SEND FEEDBACK",
+    sourceCta: "VIEW THE SOURCE",
+  },
   hooks: {
     simon: "Only obey when Simon says. The buttons will lie to you",
     sequence: "Intercept the code. Re-key it before the channel closes",

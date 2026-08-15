@@ -15,6 +15,7 @@ export type UiIcon =
   | "target"
   | "sound"
   | "muted"
+  | "info"
   | "globe"
   | "github"
   | "instagram"
@@ -392,6 +393,24 @@ const ICONS: Record<IconName, IconDef> = {
       "............",
     ],
     colors: { "#": PAPER, x: CORAL },
+  },
+  // The ⓘ mark — a ringed "i", dot and stem inside the circle.
+  info: {
+    rows: [
+      "....####....",
+      "..##....##..",
+      ".#........#.",
+      ".#...##...#.",
+      "#..........#",
+      "#....##....#",
+      "#....##....#",
+      "#....##....#",
+      ".#...##...#.",
+      ".#........#.",
+      "..##....##..",
+      "....####....",
+    ],
+    colors: { "#": LEMON },
   },
   globe: {
     rows: [
