@@ -7,7 +7,6 @@ import { TimerBar } from "@/components/TimerBar";
 import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { sfx } from "@/lib/audio";
-import { UNLIMITED_LIVES } from "@/lib/dev";
 import { haptics } from "@/lib/haptics";
 import { useKeyboardFit } from "@/lib/hooks";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
@@ -170,7 +169,7 @@ export function TypingGame() {
     timer.start(promptDuration(idx, text), () => {
       // Clock beat the fingers.
       resultsRef.current.push(false);
-      if (!UNLIMITED_LIVES) livesRef.current -= 1;
+      livesRef.current -= 1;
       setLives(livesRef.current);
       sfx.error();
       haptics.fail();

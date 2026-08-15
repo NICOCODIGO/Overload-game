@@ -7,7 +7,6 @@ import { TimerBar } from "@/components/TimerBar";
 import { Lives } from "@/components/Lives";
 import { GameTitle } from "@/components/GameTitle";
 import { sfx } from "@/lib/audio";
-import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { pick, randInt, shuffle, type Rng } from "@/lib/rng";
@@ -228,7 +227,7 @@ export function ScrambleGame() {
     elapsedRef.current += Math.max(0, budget - timer.remaining());
     timer.stop();
     resultsRef.current.push(solved);
-    if (!solved && !UNLIMITED_LIVES) livesRef.current -= 1;
+    if (!solved) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: solved, msg });
     setPhaseSafe("gap");

@@ -8,7 +8,6 @@ import { GameTitle } from "@/components/GameTitle";
 import { Lives } from "@/components/Lives";
 import { SHAPES, ShapeGlyph, isShape } from "@/components/ShapeGlyph";
 import { sfx } from "@/lib/audio";
-import { UNLIMITED_LIVES } from "@/lib/dev";
 import { dailyNumber, rngFor, type Mode } from "@/lib/daily";
 import { useCountdown } from "@/lib/useCountdown";
 import { makeBag, pick, randInt, type Rng } from "@/lib/rng";
@@ -366,7 +365,7 @@ export function AnomalyGame() {
     elapsedRef.current += Math.max(0, budget - timer.remaining());
     timer.stop();
     resultsRef.current.push(found);
-    if (!found && !UNLIMITED_LIVES) livesRef.current -= 1;
+    if (!found) livesRef.current -= 1;
     setLives(livesRef.current);
     setGap({ ok: found, msg, reveal });
     setPhase("gap");
