@@ -1,5 +1,6 @@
 import type { GameId, Mode } from "./daily";
-import { todayUTC } from "./daily";
+import { dailyNumber, todayUTC } from "./daily";
+import { GAME_ORDER } from "./games";
 
 /**
  * Client-side persistence, namespaced under `overload:`.
@@ -121,13 +122,34 @@ export function getStreak(): number {
   return s.last === today || s.last === yesterday ? s.count : 0;
 }
 
-/** Call when any daily challenge is completed. Returns the current streak. */
+/** True once every game's daily has been played for the given day. */
+function allDailiesDone(day: number): boolean {
+  return GAME_ORDER.every((g) => getDailyResult(g, day) !== null);
+}
+
+/**
+ * Call when a daily challenge is completed. Only actually advances the streak
+ * once every game's daily has been played that day — one game a day used to
+ * be enough, which let a streak run forever on a single favorite. Returns the
+ * current streak either way.
+ */
 export function bumpStreak(): number {
+  if (!allDailiesDone(dailyNumber())) return getStreak();
   const today = todayUTC();
   const s = get<StreakState | null>("streak", null);
   if (s?.last === today) return s.count;
   const count = getStreak() + 1;
   set("streak", { last: today, count });
   return count;
+}
+
+// ----------------------------------------------------------------------- mute
+
+export function getMuted(): boolean {
+  return get("muted", false);
+}
+
+export function setMuted(muted: boolean): void {
+  set("muted", muted);
 }
 

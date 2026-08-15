@@ -6,7 +6,7 @@ import type { UiIcon } from "@/components/PixelIcon";
  * never ship as dead buttons.
  */
 export const SOCIALS: { label: string; href: string; icon: UiIcon }[] = [
-  { label: "GitHub", href: "https://github.com/NICOCODIGO", icon: "github" },
+  { label: "GitHub", href: "https://github.com/NICOCODIGO/Overload-game", icon: "github" },
   { label: "Instagram", href: "", icon: "instagram" },
   { label: "X", href: "", icon: "xsocial" },
   { label: "YouTube", href: "", icon: "youtube" },

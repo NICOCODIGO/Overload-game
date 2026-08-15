@@ -6,7 +6,7 @@ import { rngFromString, type Rng } from "./rng";
  */
 
 /** Day 1 of Overload. Daily #N = days since this date + 1. */
-const EPOCH_UTC = Date.UTC(2026, 6, 18); // 2026-07-18
+const EPOCH_UTC = Date.UTC(2026, 7, 15); // 2026-08-15
 
 const MS_PER_DAY = 86_400_000;
 

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { unlockAudio, toggleMuted } from "@/lib/audio";
 import { getStreak } from "@/lib/storage";
-import { useClientValue } from "@/lib/hooks";
+import { useClientValue, useMuted } from "@/lib/hooks";
 import { useT } from "@/lib/i18n";
 import { PixelIcon } from "./PixelIcon";
 
@@ -11,6 +12,7 @@ import { PixelIcon } from "./PixelIcon";
  * sound hard right. Game switching lives on the arcade floor.
  */
 export function Header() {
+  const muted = useMuted();
   const t = useT();
   const streak = useClientValue(getStreak, 0);
 
@@ -45,6 +47,17 @@ export function Header() {
             </span>
           )}
 
+          <button
+            type="button"
+            onClick={() => {
+              unlockAudio();
+              toggleMuted();
+            }}
+            aria-label={muted ? t.unmute : t.mute}
+            className="flex h-11 w-11 items-center justify-center rounded-lg border-2 border-line bg-panel shadow-chunk-sm transition-transform hover:bg-panel2 active:translate-y-0.5 active:shadow-none"
+          >
+            <PixelIcon name={muted ? "muted" : "sound"} size={22} />
+          </button>
         </div>
       </div>
     </header>

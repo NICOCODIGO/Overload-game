@@ -1,3 +1,4 @@
+import { getMuted, setMuted } from "./storage";
 
 /**
  * Synthesized sound effects via Web Audio — zero audio assets.
@@ -33,6 +34,7 @@ interface Note {
 }
 
 function play(notes: Note[]): void {
+  if (getMuted()) return;
   const ac = audioCtx();
   if (!ac) return;
   const now = ac.currentTime;
@@ -96,4 +98,20 @@ export const sfx = {
       { freq: 196, at: 0.28, dur: 0.3, type: "sawtooth", slide: 98, gain: 0.11 },
     ]),
 };
+
+// Simple pub/sub so every mute button stays in sync.
+type Listener = (muted: boolean) => void;
+const listeners = new Set<Listener>();
+
+export function toggleMuted(): boolean {
+  const next = !getMuted();
+  setMuted(next);
+  listeners.forEach((l) => l(next));
+  return next;
+}
+
+export function onMuteChange(l: Listener): () => void {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
 

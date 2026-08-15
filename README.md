@@ -101,7 +101,7 @@ Results copy to the clipboard as share text, Wordle-style:
 
 
 ```
-Overload: Signal Rush #12 — Level 9 ⚡ — ✅✅✅✅✅✅✅✅❌ — beat me: https://…/sequence
+Overload: Signal Rush #12 — Level 9 ⚡ — beat me: https://…/sequence
 ```
 
 ## About

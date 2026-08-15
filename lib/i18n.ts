@@ -94,6 +94,8 @@ interface Dict {
   playAgain: string;
   backToArcade: string;
   lastShown: (n: number) => string;
+  mute: string;
+  unmute: string;
   hooks: Record<GameId, string>;
   games: Record<GameId, GameCopy>;
 
@@ -276,7 +278,7 @@ const EN: Dict = {
   survival: "UNLIMITED",
   survivalSub: "endless challenges",
   streak: (n) => `${n} day streak`,
-  streakHint: "Play every day to grow your streak",
+  streakHint: "Clear every game's daily to grow your streak",
   statDaily: "TODAY'S BEST",
   statSurvival: "UNLIMITED BEST",
   statStreak: "STREAK",
@@ -289,6 +291,8 @@ const EN: Dict = {
   playAgain: "PLAY AGAIN",
   backToArcade: "← BACK TO ARCADE",
   lastShown: (n) => `last ${n} shown`,
+  mute: "Mute sounds",
+  unmute: "Unmute sounds",
   hooks: {
     simon: "Only obey when Simon says. The buttons will lie to you",
     sequence: "Intercept the code. Re-key it before the channel closes",

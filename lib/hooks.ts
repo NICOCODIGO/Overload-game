@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { onMuteChange } from "./audio";
+import { getMuted } from "./storage";
 
 /**
  * Read a client-only value (localStorage-backed) after mount.
@@ -33,6 +35,15 @@ export function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
     subscribeReducedMotion,
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false
+  );
+}
+
+/** Current mute state, kept in sync across every mute button. */
+export function useMuted(): boolean {
+  return useSyncExternalStore(
+    (onChange) => onMuteChange(onChange),
+    getMuted,
     () => false
   );
 }
