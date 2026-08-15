@@ -29,4 +29,5 @@ export const REPO_LABEL = "GitHub";
  * Use the form's "Send → link" URL, not the edit URL: an edit URL lets anyone
  * who clicks it rewrite your questions.
  */
-export const FEEDBACK_URL = "";
+export const FEEDBACK_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSedwTWasIY5wSAK4YztcxKtoP4oH1GyORa62GWM_ADORxO5-A/viewform";
