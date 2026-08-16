@@ -365,8 +365,15 @@ export function SimonGame() {
             /* The stamp is positioned against this wrapper, not the card, so
                it tracks the command text however that text wraps. */
             <div className="relative">
-              {cmd.simonSays && (
-                /* Out of flow on purpose: in flow it took real height and
+              {cmd.simonSays && phase !== "ready" && (
+                /* Held back through the feint. A feint is always a says-round,
+                   so a stamp sitting above "GET READY TO TAP…" answered the
+                   round before the command had even landed — the hold is meant
+                   to bait a tap, not to hand over the verdict early. It drops
+                   in with the command instead, which is also when stamp-in
+                   reads as a stamp rather than as part of the furniture.
+
+                   Out of flow on purpose: in flow it took real height and
                    shoved the command down, so the line moved every time the
                    stamp appeared. Now the text holds its place and the stamp
                    lands across the top of it.
