@@ -343,6 +343,16 @@ dialog.panel-rise[open]::backdrop {
   animation: flame-flicker 0.85s ease-in-out infinite;
 }
 
+/* The GitHub mark ships as a black PNG, which would all but vanish against
+   the panel. Painting it through a mask instead of drawing it as an image
+   lets it take its parent's colour and follow the link's hover, the way the
+   inline SVG icons do — and keeps one source of truth for the artwork. */
+.mask-github {
+  -webkit-mask: url("/github.png") center / contain no-repeat;
+  mask: url("/github.png") center / contain no-repeat;
+  background-color: currentColor;
+}
+
 /* Respect prefers-reduced-motion: collapse all animation to near-instant */
 @media (prefers-reduced-motion: reduce) {
   *,

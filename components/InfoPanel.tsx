@@ -145,7 +145,7 @@ export function InfoPanel() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 self-start font-display text-xs text-fog transition-colors hover:text-lemon"
             >
-              <PixelIcon name="github" size={16} />
+              <span aria-hidden className="mask-github h-4 w-4 shrink-0" />
               {t.info.sourceCta}
             </a>
           )}

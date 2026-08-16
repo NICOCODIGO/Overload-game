@@ -97,6 +97,9 @@ interface Dict {
   mute: string;
   unmute: string;
 
+  /** Frame title for the swapped ad slot at the foot of the arcade. */
+  adLabel: string;
+
   /** The information panel behind the footer's ⓘ button — the one place the
       rules that aren't visible on screen actually get stated. */
   info: {
@@ -315,6 +318,7 @@ const EN: Dict = {
   lastShown: (n) => `last ${n} shown`,
   mute: "Mute sounds",
   unmute: "Unmute sounds",
+  adLabel: "Advertisement",
   info: {
     label: "How this works",
     title: "HOW OVERLOAD WORKS",
